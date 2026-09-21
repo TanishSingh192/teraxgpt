@@ -302,7 +302,7 @@ export function ChatView({
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-panel via-panel to-transparent px-4 pb-3 pt-8 md:px-8">
           <div className="pointer-events-auto mx-auto max-w-[760px]">
-            <div className="rounded-2xl border border-line bg-panel p-2 shadow-[0_8px_30px_rgba(31,35,43,0.08)]">
+            <div className="composer-shell rounded-2xl border border-line bg-panel p-2">
               {files.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-1.5 px-1">
                   {files.map((file, index) => (

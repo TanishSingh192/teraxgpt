@@ -81,6 +81,10 @@
   animation: stream 1.1s ease-in-out infinite;
 }
 
+@utility composer-shell {
+  box-shadow: 0 8px 30px color-mix(in oklab, var(--ink) 8%, transparent);
+}
+
 @keyframes stream {
   0%,
   100% {
