@@ -62,7 +62,7 @@ export const MODELS: ModelEntry[] = [
 export const AUTO = "auto";
 
 export function getModel(id: string): ModelEntry {
-  return MODELS.find((m) => m.id === id) ?? MODELS[0];
+  return MODELS.find((m) => m.id === id) ?? (MODELS[0] as ModelEntry);
 }
 
 export type RoutingDecision = {
