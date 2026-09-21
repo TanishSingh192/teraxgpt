@@ -64,6 +64,7 @@ function Workspace() {
   const [initialMessages, setInitialMessages] = useState<AppMessage[]>([]);
   const [chatKey, setChatKey] = useState("new");
   const [monthlyCost, setMonthlyCost] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !session) void navigate({ to: "/auth" });
@@ -127,8 +128,8 @@ function Workspace() {
     "You";
 
   return (
-    <div className="mesh-canvas relative min-h-screen w-full overflow-hidden text-ink">
-      <div className="relative mx-auto flex h-screen max-w-[1640px] overflow-hidden">
+    <div className="relative min-h-screen w-full overflow-hidden bg-panel text-ink">
+      <div className="relative flex h-screen overflow-hidden">
         <Sidebar
           conversations={conversations}
           activeId={activeId}
@@ -136,6 +137,8 @@ function Workspace() {
           onNew={newChat}
           userName={displayName}
           userEmail={user?.email ?? ""}
+          mobileOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
         <ChatView
           key={chatKey}
@@ -154,6 +157,7 @@ function Workspace() {
             setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)))
           }
           onUsage={(cost) => setMonthlyCost((prev) => prev + cost)}
+          onOpenSidebar={() => setSidebarOpen(true)}
         />
       </div>
     </div>

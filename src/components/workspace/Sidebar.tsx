@@ -1,5 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
+import { LogOut, MessageSquare, PanelLeftClose, Plus, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ConversationRow = {
@@ -15,6 +18,8 @@ export function Sidebar({
   onNew,
   userName,
   userEmail,
+  mobileOpen,
+  onClose,
 }: {
   conversations: ConversationRow[];
   activeId: string | null;
@@ -22,54 +27,68 @@ export function Sidebar({
   onNew: () => void;
   userName: string;
   userEmail: string;
+  mobileOpen: boolean;
+  onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const filteredConversations = useMemo(
+    () => conversations.filter((conversation) => conversation.title.toLowerCase().includes(query.toLowerCase())),
+    [conversations, query],
+  );
 
   return (
-    <aside className="hidden w-[232px] shrink-0 flex-col border-r border-line bg-panel/70 px-3 py-4 md:flex">
-      <div className="flex items-center gap-2.5 px-2 pb-5">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-ink text-white">
+    <>
+      {mobileOpen && <div className="fixed inset-0 z-30 bg-ink/20 md:hidden" onClick={onClose} />}
+      <aside className={`${mobileOpen ? "flex" : "hidden"} fixed inset-y-0 left-0 z-40 w-[280px] shrink-0 flex-col bg-background px-3 py-3 md:static md:flex md:w-[260px]`}>
+      <div className="flex h-10 items-center gap-2.5 px-2">
+        <div className="flex size-7 items-center justify-center rounded-lg bg-ink text-primary-foreground">
           <span className="font-display text-[13px] font-semibold">M</span>
         </div>
-        <span className="font-display text-[15px] font-semibold tracking-tight">Multiform</span>
+        <span className="font-display text-[15px] font-semibold">Multiform</span>
+        <Button variant="ghost" size="icon" onClick={onClose} className="ml-auto md:hidden" aria-label="Close sidebar">
+          <PanelLeftClose />
+        </Button>
       </div>
 
-      <button
-        type="button"
-        onClick={onNew}
-        className="flex w-full items-center gap-2.5 rounded-lg bg-signal px-3 py-2 text-sm font-medium text-white ring-1 ring-signal"
+      <Button
+        variant="outline"
+        onClick={() => { onNew(); onClose(); }}
+        className="mt-4 h-10 w-full justify-start border-line bg-panel px-3 shadow-none"
       >
-        <span className="grid size-4 place-items-center leading-none text-white">+</span>
+        <Plus />
         New chat
-      </button>
+      </Button>
 
-      <div className="mt-5 mb-1 px-2 text-[10px] font-medium uppercase tracking-[0.14em] text-subtle">
-        Chats
+      <label className="mt-3 flex h-9 items-center gap-2 rounded-lg px-3 text-subtle focus-within:bg-panel">
+        <Search className="size-4" />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search chats" className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-subtle" />
+      </label>
+
+      <div className="mb-1 mt-5 px-3 text-[11px] font-medium text-subtle">
+        Recent
       </div>
-      <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto text-sm">
-        {conversations.length === 0 ? (
-          <p className="px-3 py-2 text-[12px] text-subtle">Nothing here yet.</p>
+      <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+        {filteredConversations.length === 0 ? (
+          <p className="px-3 py-2 text-[12px] text-subtle">No conversations yet</p>
         ) : (
-          conversations.map((conversation) => (
-            <button
+          filteredConversations.map((conversation) => (
+            <Button
               key={conversation.id}
-              type="button"
-              onClick={() => onSelect(conversation.id)}
-              className={
-                conversation.id === activeId
-                  ? "truncate rounded-lg bg-signal-soft px-3 py-2 text-left font-medium text-ink"
-                  : "truncate rounded-lg px-3 py-2 text-left text-subtle hover:bg-black/[0.03]"
-              }
+              variant="ghost"
+              onClick={() => { onSelect(conversation.id); onClose(); }}
+              className={`${conversation.id === activeId ? "bg-panel text-ink" : "text-subtle"} h-9 w-full justify-start gap-2 px-3 text-[13px] font-normal shadow-none`}
             >
-              {conversation.title}
-            </button>
+              <MessageSquare className="size-3.5" />
+              <span className="truncate">{conversation.title}</span>
+            </Button>
           ))
         )}
       </nav>
 
-      <div className="mt-2 border-t border-line px-2 pt-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ink/90 text-[11px] font-medium text-white">
+      <div className="mt-2 border-t border-line pt-3">
+        <div className="flex items-center gap-2.5 px-2">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-medium text-primary-foreground">
             {userName.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0 leading-tight">
@@ -77,17 +96,19 @@ export function Sidebar({
             <div className="truncate text-[11px] text-subtle">{userEmail}</div>
           </div>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={async () => {
             await supabase.auth.signOut();
             void navigate({ to: "/auth" });
           }}
-          className="mt-2 w-full rounded-lg px-3 py-2 text-left text-[13px] text-subtle hover:bg-black/[0.03]"
+          className="mt-2 h-9 w-full justify-start px-3 text-[13px] font-normal text-subtle"
         >
+          <LogOut />
           Sign out
-        </button>
+        </Button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
