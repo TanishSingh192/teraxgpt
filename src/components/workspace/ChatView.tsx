@@ -183,7 +183,7 @@ export function ChatView({
 
     const dataTransfer = new DataTransfer();
     files.forEach((file) => dataTransfer.items.add(file));
-    void sendMessage({ text, files: files.length ? dataTransfer.files : undefined });
+    void sendMessage(files.length ? { text, files: dataTransfer.files } : { text });
     setInput("");
     setFiles([]);
   }
