@@ -258,7 +258,6 @@ export function ChatView({
                         ))}
                       <span className="whitespace-pre-wrap">{textOf(message)}</span>
                     </div>
-                  </div>
                 </div>
               ) : (
                 <div key={message.id} className="mt-9 flex gap-4 first:mt-0">
