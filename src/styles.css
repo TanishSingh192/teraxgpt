@@ -57,12 +57,12 @@
   --font-family-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-family-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  --background: oklch(0.973 0.005 255);
+  --background: oklch(0.965 0.003 80);
   --foreground: oklch(0.243 0.01 258);
   --ink: oklch(0.243 0.01 258);
   --subtle: oklch(0.551 0.023 264);
-  --line: oklch(0.925 0.008 255);
-  --panel: oklch(1 0 0);
+  --line: oklch(0.91 0.004 80);
+  --panel: oklch(0.995 0.002 80);
   --signal: oklch(0.573 0.208 261);
   --signal-soft: oklch(0.957 0.017 254);
   --code-bg: oklch(0.186 0.011 259);

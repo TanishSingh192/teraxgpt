@@ -1,10 +1,12 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUp, Bot, ChevronDown, Menu, Paperclip, RotateCcw, Square, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Markdown } from "@/components/workspace/Markdown";
-import { ContextPanel, type TurnInfo } from "@/components/workspace/ContextPanel";
+import { Button } from "@/components/ui/button";
+import type { TurnInfo } from "@/components/workspace/ContextPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { AUTO, MODELS, estimateCost, getModel } from "@/lib/models";
 
@@ -42,6 +44,7 @@ export function ChatView({
   onConversationCreated,
   onTitleChange,
   onUsage,
+  onOpenSidebar,
 }: {
   conversationId: string | null;
   initialMessages: AppMessage[];
@@ -50,6 +53,7 @@ export function ChatView({
   onConversationCreated: (id: string, title: string) => void;
   onTitleChange: (id: string, title: string) => void;
   onUsage: (cost: number) => void;
+  onOpenSidebar: () => void;
 }) {
   const [modelId, setModelId] = useState<string>(AUTO);
   const [input, setInput] = useState("");
@@ -191,72 +195,60 @@ export function ChatView({
   const activeModelLabel = modelId === AUTO ? "Auto" : getModel(modelId).label;
 
   return (
-    <>
-      <main className="relative flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-panel/60 px-6">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="truncate text-[13px] font-medium text-ink">
-                {initialTitle || "New chat"}
-              </span>
-              <span className="rounded-full bg-signal-soft px-2 py-0.5 text-[10px] font-medium text-signal">
-                {activeModelLabel}
-              </span>
-            </div>
-            <div className="text-[11px] text-subtle">
-              {turn?.reason ?? "Auto routes each message to a suitable model"}
-            </div>
-          </div>
+      <main className="relative flex min-w-0 flex-1 flex-col bg-panel">
+        <header className="flex h-14 shrink-0 items-center gap-2 px-3 md:px-5">
+          <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="md:hidden" aria-label="Open sidebar"><Menu /></Button>
+          <label className="relative flex items-center">
+            <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 font-display text-[15px] font-semibold outline-none hover:bg-background">
+              <option value={AUTO}>Multiform Auto</option>
+              {MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
+          </label>
           <div className="ml-auto flex items-center gap-2">
             {busy ? (
-              <button
-                type="button"
-                onClick={() => stop()}
-                className="rounded-lg px-3 py-1.5 text-[12px] font-medium text-subtle ring-1 ring-black/5 hover:bg-black/[0.03]"
-              >
-                Stop
-              </button>
+              <Button variant="ghost" size="sm" onClick={() => stop()}><Square /> Stop</Button>
             ) : (
               messages.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => void regenerate()}
-                  className="rounded-lg px-3 py-1.5 text-[12px] font-medium text-subtle ring-1 ring-black/5 hover:bg-black/[0.03]"
-                >
-                  Regenerate
-                </button>
+                <Button variant="ghost" size="sm" onClick={() => void regenerate()}><RotateCcw /> Regenerate</Button>
               )
             )}
           </div>
         </header>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-44 pt-8 md:px-8">
           <div className="mx-auto max-w-[760px]">
             {messages.length === 0 && (
-              <div className="pt-10 text-center">
-                <h1 className="font-display text-[22px] font-semibold tracking-tight">
-                  What do you want to get done?
+              <div className="flex min-h-[52vh] flex-col items-center justify-center text-center">
+                <div className="mb-5 grid size-11 place-items-center rounded-xl bg-ink text-primary-foreground"><Bot className="size-5" /></div>
+                <h1 className="font-display text-[28px] font-semibold">
+                  How can I help you today?
                 </h1>
-                <p className="mt-2 text-[13px] text-subtle">
-                  Ask anything, drop a PDF or an image. Auto picks the model for the task.
+                <p className="mt-2 max-w-md text-[14px] text-subtle">
+                  Ask a question, create something, or attach a file to get started.
                 </p>
+                <div className="mt-8 grid w-full max-w-[620px] grid-cols-1 gap-2 sm:grid-cols-2">
+                  {CAPABILITY_PROMPTS.map((item) => (
+                    <Button key={item.label} variant="outline" onClick={() => setInput(item.prompt)} className="h-auto justify-start rounded-xl border-line px-4 py-3 text-left shadow-none">
+                      <span><span className="block text-[13px] font-medium text-ink">{item.label}</span><span className="block text-[12px] font-normal text-subtle">Start with a guided prompt</span></span>
+                    </Button>
+                  ))}
+                </div>
               </div>
             )}
 
             {messages.map((message) =>
               message.role === "user" ? (
-                <div key={message.id} className="mt-7 flex justify-end first:mt-0">
-                  <div className="max-w-[440px]">
-                    <div className="mb-1.5 text-right text-[11px] text-subtle">You</div>
-                    <div className="rounded-2xl rounded-tr-md bg-ink px-4 py-3 text-[14px] leading-relaxed text-white">
+                <div key={message.id} className="mt-9 flex justify-end first:mt-0">
+                  <div className="max-w-[78%] rounded-2xl bg-background px-4 py-3 text-[14px] leading-relaxed text-ink">
                       {message.parts
                         .filter((p) => p.type === "file")
                         .map((part, index) => (
                           <span
                             key={index}
-                            className="mb-2 flex w-fit items-center gap-2 rounded-lg bg-white/10 px-2.5 py-1.5 text-[12px]"
+                            className="mb-2 flex w-fit items-center gap-2 rounded-lg bg-panel px-2.5 py-1.5 text-[12px]"
                           >
-                            <span className="grid size-4 place-items-center rounded bg-white/15 text-[9px] font-semibold">
+                            <span className="grid size-4 place-items-center rounded bg-signal-soft text-[9px] font-semibold">
                               {(part as { mediaType?: string }).mediaType?.startsWith("image/")
                                 ? "IMG"
                                 : "DOC"}
@@ -269,30 +261,23 @@ export function ChatView({
                   </div>
                 </div>
               ) : (
-                <div key={message.id} className="mt-7 flex gap-3 first:mt-0">
-                  <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-signal text-[12px] font-semibold text-white">
-                    A
+                <div key={message.id} className="mt-9 flex gap-4 first:mt-0">
+                  <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-ink text-primary-foreground">
+                    <Bot className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex items-center gap-2 text-[11px] text-subtle">
-                      Assistant <span className="text-subtle/60">·</span> routed{" "}
-                      <span className="font-medium text-ink">
-                        {message.metadata?.task ?? "Auto"}
-                      </span>
-                      {message.metadata?.modelLabel && (
-                        <span className="rounded-full bg-signal-soft px-2 py-0.5 text-[10px] font-medium text-signal">
-                          {message.metadata.modelLabel}
-                        </span>
-                      )}
+                    <div className="mb-2 flex items-center gap-2 text-[12px] font-medium text-ink">
+                      Multiform
                     </div>
                     <Markdown>{textOf(message)}</Markdown>
+                    {message.metadata?.modelLabel && <div className="mt-3 text-[11px] text-subtle">{message.metadata.modelLabel} · {message.metadata.reason}</div>}
                   </div>
                 </div>
               ),
             )}
 
             {busy && (
-              <div className="mt-4 flex items-center gap-2.5 rounded-lg bg-panel px-3 py-2.5 text-[12px] ring-1 ring-black/5">
+              <div className="mt-8 flex items-center gap-3 text-[12px] text-subtle">
                 <span className="flex items-center gap-1">
                   <span className="stream-dot size-1.5 rounded-full bg-signal" />
                   <span
@@ -304,10 +289,7 @@ export function ChatView({
                     style={{ animationDelay: "0.36s" }}
                   />
                 </span>
-                <span className="font-medium text-ink">
-                  {status === "submitted" ? "Routing your request" : "Streaming response"}
-                </span>
-                <span className="text-subtle">{activeModelLabel}</span>
+                <span>{status === "submitted" ? "Thinking…" : `${activeModelLabel} is responding…`}</span>
               </div>
             )}
 
@@ -319,22 +301,9 @@ export function ChatView({
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-line bg-panel/60 px-6 pb-5 pt-3">
-          <div className="mx-auto max-w-[760px]">
-            <div className="mb-2.5 flex flex-wrap gap-1.5">
-              {CAPABILITY_PROMPTS.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => setInput(item.prompt)}
-                  className="rounded-full bg-panel px-2.5 py-1 text-[11px] font-medium text-subtle ring-1 ring-black/5 hover:text-ink"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="rounded-2xl bg-panel p-2.5 ring-1 ring-black/5">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-panel via-panel to-transparent px-4 pb-3 pt-8 md:px-8">
+          <div className="pointer-events-auto mx-auto max-w-[760px]">
+            <div className="rounded-2xl border border-line bg-panel p-2 shadow-[0_8px_30px_rgba(31,35,43,0.08)]">
               {files.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-1.5 px-1">
                   {files.map((file, index) => (
@@ -343,13 +312,14 @@ export function ChatView({
                       className="flex items-center gap-1.5 rounded-lg bg-signal-soft px-2.5 py-1 text-[11px] text-ink"
                     >
                       {file.name}
-                      <button
-                        type="button"
-                        className="text-subtle hover:text-ink"
+                      <Button
+                        variant="ghost" size="icon"
+                        className="size-5"
                         onClick={() => setFiles(files.filter((_, i) => i !== index))}
+                        aria-label={`Remove ${file.name}`}
                       >
-                        ×
-                      </button>
+                        <X className="size-3" />
+                      </Button>
                     </span>
                   ))}
                 </div>
@@ -368,70 +338,42 @@ export function ChatView({
                       event.target.value = "";
                     }}
                   />
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost" size="icon"
                     onClick={() => fileInputRef.current?.click()}
-                    className="grid size-8 place-items-center rounded-lg text-subtle hover:bg-black/[0.04]"
+                    className="text-subtle"
                     aria-label="Attach a file"
                   >
-                    <span className="text-[13px] leading-none">📎</span>
-                  </button>
+                    <Paperclip />
+                  </Button>
                 </div>
                 <textarea
                   rows={1}
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                    if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
                       void handleSend();
                     }
                   }}
-                  placeholder="Ask anything, or drop a file…"
-                  className="max-h-40 flex-1 resize-none bg-transparent py-1.5 text-[14px] outline-none placeholder:text-subtle"
+                  placeholder="Message Multiform"
+                  className="max-h-40 min-h-9 flex-1 resize-none bg-transparent py-2 text-[14px] outline-none placeholder:text-subtle"
                 />
-                <button
-                  type="button"
+                <Button
                   onClick={() => void handleSend()}
-                  disabled={busy}
-                  className="flex size-8 items-center justify-center rounded-lg bg-signal text-white ring-1 ring-signal disabled:opacity-50"
+                  disabled={busy || (!input.trim() && files.length === 0)}
+                  size="icon"
+                  className="rounded-xl bg-ink text-primary-foreground shadow-none hover:bg-ink/90"
                   aria-label="Send"
                 >
-                  <span className="text-[13px] leading-none">↑</span>
-                </button>
-              </div>
-
-              <div className="mt-2 flex items-center gap-2 border-t border-line px-1 pt-2">
-                <select
-                  value={modelId}
-                  onChange={(event) => setModelId(event.target.value)}
-                  className="rounded-full bg-signal-soft px-2 py-0.5 text-[11px] font-medium text-signal outline-none"
-                >
-                  <option value={AUTO}>Auto</option>
-                  {MODELS.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.label}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-[11px] text-subtle">
-                  {modelId === AUTO
-                    ? "Routes to the best model for this task"
-                    : getModel(modelId).blurb}
-                </span>
-                <span className="ml-auto font-mono text-[11px] text-subtle">⌘↵ to send</span>
+                  <ArrowUp />
+                </Button>
               </div>
             </div>
+            <p className="mt-2 text-center text-[10px] text-subtle">Multiform can make mistakes. Check important information.</p>
           </div>
         </div>
       </main>
-
-      <ContextPanel
-        attachments={attachments}
-        turn={turn}
-        monthlyCost={monthlyCost}
-        messageCount={messages.length}
-      />
-    </>
   );
 }
