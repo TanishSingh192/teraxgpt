@@ -538,8 +538,79 @@ export function ChatView({
                         ))}
                       </div>
                     )}
+                    {(() => {
+                      const plan = planOf(message);
+                      if (!plan) return null;
+                      return (
+                        <div className="mb-3 rounded-xl bg-background px-3 py-2.5">
+                          <div className="mb-1.5 text-[11px] font-medium text-subtle">
+                            Plan · {plan.goal}
+                          </div>
+                          <ol className="space-y-1">
+                            {plan.steps.map((step, index) => (
+                              <li key={index} className="flex items-start gap-2 text-[12px] text-ink">
+                                <span
+                                  className={`mt-1.5 size-1.5 shrink-0 rounded-full ${
+                                    step.status === "done"
+                                      ? "bg-signal"
+                                      : step.status === "active"
+                                        ? "bg-ink"
+                                        : "bg-line"
+                                  }`}
+                                />
+                                <span className={step.status === "skipped" ? "text-subtle line-through" : ""}>
+                                  {step.title}
+                                </span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      );
+                    })()}
+                    {generatedImages(message).map((image) => (
+                      <GeneratedImage key={image.path} path={image.path} prompt={image.prompt} />
+                    ))}
+                    {pendingApprovals(message).map((approval) => (
+                      <div
+                        key={approval.id}
+                        className="mb-3 rounded-xl border border-line bg-background px-3 py-2.5"
+                      >
+                        <div className="text-[12px] text-ink">
+                          Allow this agent to run <strong>{approval.tool.replace(/_/g, " ")}</strong>?
+                        </div>
+                        <pre className="mt-1.5 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-panel px-2 py-1.5 text-[11px] text-subtle">
+                          {JSON.stringify(approval.input, null, 2)}
+                        </pre>
+                        <div className="mt-2 flex gap-2">
+                          <Button
+                            size="sm"
+                            className="rounded-lg bg-ink text-primary-foreground shadow-none hover:bg-ink/90"
+                            onClick={() =>
+                              void addToolApprovalResponse({ id: approval.id, approved: true })
+                            }
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-lg border-line shadow-none"
+                            onClick={() =>
+                              void addToolApprovalResponse({ id: approval.id, approved: false })
+                            }
+                          >
+                            Deny
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                     <Markdown>{textOf(message)}</Markdown>
-                    {message.metadata?.modelLabel && <div className="mt-3 text-[11px] text-subtle">{message.metadata.modelLabel} · {message.metadata.reason}</div>}
+                    {message.metadata?.modelLabel && (
+                      <div className="mt-3 text-[11px] text-subtle">
+                        {message.metadata.agentName ? `${message.metadata.agentName} · ` : ""}
+                        {message.metadata.modelLabel} · {message.metadata.reason}
+                      </div>
+                    )}
                   </div>
                 </div>
               ),
