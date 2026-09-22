@@ -1,8 +1,8 @@
 // Central model registry + routing engine.
 // The app talks in capabilities; this layer decides which model serves them.
 
-export type Capability = "text" | "vision" | "reasoning" | "tools" | "files";
-export type Endpoint = "responses" | "chat";
+export type Capability = "text" | "vision" | "reasoning" | "tools" | "files" | "image";
+export type Endpoint = "responses" | "chat" | "image";
 
 export type ModelEntry = {
   id: string;
@@ -57,9 +57,22 @@ export const MODELS: ModelEntry[] = [
     contextWindow: 1_000_000,
     pricing: { input: 1.25, output: 10 },
   },
+  {
+    id: "openai/gpt-image-2.5-sunburst",
+    label: "Sunburst",
+    provider: "openai",
+    endpoint: "image",
+    blurb: "image creation",
+    capabilities: ["image", "text"],
+    contextWindow: 32_000,
+    pricing: { input: 0.5, output: 4 },
+  },
 ];
 
 export const AUTO = "auto";
+
+/** The image model is invoked as a tool, driven by this chat model. */
+export const IMAGE_DRIVER_ID = "openai/gpt-5.6-terra";
 
 export function getModel(id: string): ModelEntry {
   return MODELS.find((m) => m.id === id) ?? (MODELS[0] as ModelEntry);
@@ -84,10 +97,20 @@ const RESEARCH_HINTS = /\b(research|search|latest|news|compare sources|cite|who 
 const REASONING_HINTS =
   /\b(analy[sz]e|strategy|plan|prove|derive|architecture|trade-?offs?|explain why|step by step)\b/i;
 
+const IMAGE_HINTS =
+  /\b(draw|illustrat\w*|generate an image|create an image|make an image|picture of|image of|poster|logo|artwork|render)\b/i;
+
 /** Deterministic, auditable routing. It never claims a model it does not use. */
 export function routeRequest(input: RoutingInput): RoutingDecision {
   const { text, hasImage, hasFile, charCount } = input;
 
+  if (!hasImage && !hasFile && IMAGE_HINTS.test(text)) {
+    return {
+      model: getModel("openai/gpt-image-2.5-sunburst"),
+      task: "Image",
+      reason: "image request — routed to the image model",
+    };
+  }
   if (hasImage) {
     return {
       model: getModel("openai/gpt-6-astra"),

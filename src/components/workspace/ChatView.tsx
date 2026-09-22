@@ -31,9 +31,43 @@ export type ChatMetadata = {
   provider?: string;
   task?: string;
   reason?: string;
+  agentName?: string;
   inputTokens?: number;
   outputTokens?: number;
 };
+
+type AgentOption = { id: string; name: string };
+
+type PlanStep = { title: string; status: "pending" | "active" | "done" | "skipped" };
+
+function GeneratedImage({ path, prompt }: { path: string; prompt: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void supabase.storage
+      .from("generated-images")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => {
+        if (alive) setUrl(data?.signedUrl ?? null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [path]);
+  if (!url) {
+    return (
+      <div className="mb-3 grid h-52 w-full max-w-[420px] place-items-center rounded-xl bg-background text-[12px] text-subtle">
+        Preparing image…
+      </div>
+    );
+  }
+  return (
+    <figure className="mb-3">
+      <img src={url} alt={prompt} className="w-full max-w-[420px] rounded-xl" />
+      <figcaption className="mt-1.5 text-[11px] text-subtle">{prompt}</figcaption>
+    </figure>
+  );
+}
 
 export type AppMessage = UIMessage<ChatMetadata>;
 
@@ -68,6 +102,48 @@ function researchSteps(message: AppMessage): ResearchStep[] {
   return steps;
 }
 
+type ToolPart = {
+  type: string;
+  state?: string;
+  toolCallId?: string;
+  approval?: { id: string; approved?: boolean; reason?: string };
+  input?: Record<string, unknown>;
+  output?: Record<string, unknown>;
+};
+
+function toolParts(message: AppMessage): ToolPart[] {
+  return (message.parts as ToolPart[]).filter((p) => p.type.startsWith("tool-"));
+}
+
+function generatedImages(message: AppMessage) {
+  return toolParts(message)
+    .filter((p) => p.type === "tool-generate_image" && p.state === "output-available")
+    .map((p) => ({
+      path: String(p.output?.["path"] ?? ""),
+      prompt: String(p.output?.["prompt"] ?? "Generated image"),
+    }))
+    .filter((image) => image.path.length > 0);
+}
+
+function planOf(message: AppMessage): { goal: string; steps: PlanStep[] } | null {
+  const plans = toolParts(message).filter((p) => p.type === "tool-update_plan" && p.input);
+  const latest = plans[plans.length - 1];
+  if (!latest) return null;
+  const steps = (latest.input?.["steps"] ?? []) as PlanStep[];
+  if (!Array.isArray(steps) || steps.length === 0) return null;
+  return { goal: String(latest.input?.["goal"] ?? "Plan"), steps };
+}
+
+function pendingApprovals(message: AppMessage) {
+  return toolParts(message)
+    .filter((p) => p.state === "approval-requested" && p.approval?.id)
+    .map((p) => ({
+      id: p.approval!.id,
+      tool: p.type.replace("tool-", ""),
+      input: p.input ?? {},
+    }));
+}
+
 export function ChatView({
   conversationId,
   initialMessages,
@@ -100,6 +176,9 @@ export function ChatView({
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [agentId, setAgentId] = useState<string>("");
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+
 
   const modelRef = useRef(modelId);
   modelRef.current = modelId;
@@ -109,6 +188,8 @@ export function ChatView({
   projectRef.current = projectId;
   const voiceRef = useRef(voiceReplies);
   voiceRef.current = voiceReplies;
+  const agentRef = useRef(agentId);
+  agentRef.current = agentId;
   const conversationRef = useRef<string | null>(conversationId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -127,6 +208,18 @@ export function ChatView({
 
   useEffect(() => () => speechRef.current?.abort(), []);
 
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const query = supabase.from("agents").select("id,name").order("created_at", { ascending: false });
+      const { data } = projectId ? await query.eq("project_id", projectId) : await query;
+      if (alive) setAgents((data ?? []) as AgentOption[]);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [projectId]);
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport<AppMessage>({
@@ -140,6 +233,8 @@ export function ChatView({
               modelId: modelRef.current,
               research: researchRef.current,
               projectId: projectRef.current,
+              agentId: agentRef.current || null,
+              conversationId: conversationRef.current,
             },
           };
         },
@@ -147,7 +242,15 @@ export function ChatView({
     [],
   );
 
-  const { messages, sendMessage, status, error, stop, regenerate } = useChat<AppMessage>({
+  const {
+    messages,
+    sendMessage,
+    status,
+    error,
+    stop,
+    regenerate,
+    addToolApprovalResponse,
+  } = useChat<AppMessage>({
     transport,
     messages: initialMessages,
     onFinish: async ({ message }) => {
@@ -322,6 +425,24 @@ export function ChatView({
               {projectName}
             </span>
           )}
+          {agents.length > 0 && (
+            <label className="relative flex items-center">
+              <select
+                value={agentId}
+                onChange={(event) => setAgentId(event.target.value)}
+                aria-label="Agent"
+                className={`appearance-none rounded-lg py-1.5 pl-2.5 pr-7 text-[12px] outline-none hover:bg-background ${agentId ? "bg-signal-soft text-ink" : "bg-transparent text-subtle"}`}
+              >
+                <option value="">No agent</option>
+                {agents.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
+            </label>
+          )}
           <div className="ml-auto flex items-center gap-2">
             <Button
               variant="ghost"
@@ -417,8 +538,79 @@ export function ChatView({
                         ))}
                       </div>
                     )}
+                    {(() => {
+                      const plan = planOf(message);
+                      if (!plan) return null;
+                      return (
+                        <div className="mb-3 rounded-xl bg-background px-3 py-2.5">
+                          <div className="mb-1.5 text-[11px] font-medium text-subtle">
+                            Plan · {plan.goal}
+                          </div>
+                          <ol className="space-y-1">
+                            {plan.steps.map((step, index) => (
+                              <li key={index} className="flex items-start gap-2 text-[12px] text-ink">
+                                <span
+                                  className={`mt-1.5 size-1.5 shrink-0 rounded-full ${
+                                    step.status === "done"
+                                      ? "bg-signal"
+                                      : step.status === "active"
+                                        ? "bg-ink"
+                                        : "bg-line"
+                                  }`}
+                                />
+                                <span className={step.status === "skipped" ? "text-subtle line-through" : ""}>
+                                  {step.title}
+                                </span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      );
+                    })()}
+                    {generatedImages(message).map((image) => (
+                      <GeneratedImage key={image.path} path={image.path} prompt={image.prompt} />
+                    ))}
+                    {pendingApprovals(message).map((approval) => (
+                      <div
+                        key={approval.id}
+                        className="mb-3 rounded-xl border border-line bg-background px-3 py-2.5"
+                      >
+                        <div className="text-[12px] text-ink">
+                          Allow this agent to run <strong>{approval.tool.replace(/_/g, " ")}</strong>?
+                        </div>
+                        <pre className="mt-1.5 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-panel px-2 py-1.5 text-[11px] text-subtle">
+                          {JSON.stringify(approval.input, null, 2)}
+                        </pre>
+                        <div className="mt-2 flex gap-2">
+                          <Button
+                            size="sm"
+                            className="rounded-lg bg-ink text-primary-foreground shadow-none hover:bg-ink/90"
+                            onClick={() =>
+                              void addToolApprovalResponse({ id: approval.id, approved: true })
+                            }
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-lg border-line shadow-none"
+                            onClick={() =>
+                              void addToolApprovalResponse({ id: approval.id, approved: false })
+                            }
+                          >
+                            Deny
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                     <Markdown>{textOf(message)}</Markdown>
-                    {message.metadata?.modelLabel && <div className="mt-3 text-[11px] text-subtle">{message.metadata.modelLabel} · {message.metadata.reason}</div>}
+                    {message.metadata?.modelLabel && (
+                      <div className="mt-3 text-[11px] text-subtle">
+                        {message.metadata.agentName ? `${message.metadata.agentName} · ` : ""}
+                        {message.metadata.modelLabel} · {message.metadata.reason}
+                      </div>
+                    )}
                   </div>
                 </div>
               ),

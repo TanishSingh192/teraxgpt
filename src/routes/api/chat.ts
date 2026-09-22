@@ -9,13 +9,17 @@ import {
   createLovableAiGatewayRunIdFetch,
   getLovableAiGatewayRunId,
 } from "@/lib/ai-gateway.server";
+import { DEFAULT_AGENT_TOOLS, isWriteTool, type ToolId } from "@/lib/agent-tools";
 import { openPage, webSearch } from "@/lib/firecrawl.server";
-import { AUTO, getModel, routeRequest, type ModelEntry } from "@/lib/models";
+import { generateImageBytes } from "@/lib/image.server";
+import { AUTO, IMAGE_DRIVER_ID, getModel, routeRequest, type ModelEntry } from "@/lib/models";
 
 const SYSTEM_PROMPT = `You are Multiform, a unified AI workspace assistant.
 Be direct and useful. Use markdown: headings, bullet lists, tables and fenced code blocks with a language tag.
 When you are uncertain, say so plainly instead of inventing facts, sources or numbers.
-Never claim to have used a tool, browsed the web, or read a file that was not provided to you.`;
+Never claim to have used a tool, browsed the web, or read a file that was not provided to you.
+You can look at images the user attaches, and you can create images with the generate_image tool when it is available.
+After generating an image, describe it in one short line instead of trying to paste the image into your text.`;
 
 const RESEARCH_PROMPT = `Web research mode is ON. You have two tools:
 - web_search: find candidate sources for a query.
@@ -24,6 +28,22 @@ Work like a researcher: search, open at least two promising sources, extract the
 cross-check any claim that matters against a second independent source, and note disagreements explicitly.
 Cite every non-obvious claim inline as a markdown link to the exact page you read, and finish with a
 "Sources" list of the pages you actually opened. Never cite a page you did not open, and never invent a URL.`;
+
+const AGENT_PROMPT = `You are running as a configured agent.
+Before acting on anything that needs more than one step, call update_plan with the numbered steps you intend to take.
+Then execute the steps in order, calling update_plan again to mark each step "done" (or "skipped", with a reason in the title)
+as you finish it. Only use the tools you were given; if a step needs a capability you do not have,
+say so plainly and stop instead of pretending to do it. Finish with a short summary of what you actually did.`;
+
+type AgentRow = {
+  id: string;
+  name: string;
+  instructions: string;
+  model_id: string;
+  tools: unknown;
+  require_approval: boolean;
+  project_id: string | null;
+};
 
 async function projectContext(supabase: SupabaseClient, projectId: string) {
   const [project, files, memory] = await Promise.all([
@@ -110,20 +130,38 @@ export const Route = createFileRoute("/api/chat")({
             headers: { "content-type": "application/json" },
           });
         }
+        const userId = userData.user.id;
 
         const body = (await request.json()) as {
           messages: UIMessage[];
           modelId?: string;
           research?: boolean;
           projectId?: string | null;
+          agentId?: string | null;
+          conversationId?: string | null;
         };
         const messages = body.messages ?? [];
         const requested = body.modelId ?? AUTO;
         const research = body.research === true;
 
+        // Load the agent (RLS keeps this to the caller's own agents).
+        let agent: AgentRow | null = null;
+        if (body.agentId) {
+          const { data } = await supabase
+            .from("agents")
+            .select("id,name,instructions,model_id,tools,require_approval,project_id")
+            .eq("id", body.agentId)
+            .maybeSingle();
+          agent = (data as AgentRow | null) ?? null;
+        }
+
+        const projectId = body.projectId ?? agent?.project_id ?? null;
+
         const signals = describe(messages);
+        const agentModel = agent && agent.model_id !== AUTO ? agent.model_id : null;
+        const chosen = agentModel ?? requested;
         const decision =
-          requested === AUTO
+          chosen === AUTO
             ? research
               ? {
                   model: getModel("openai/gpt-6-astra"),
@@ -132,45 +170,152 @@ export const Route = createFileRoute("/api/chat")({
                 }
               : routeRequest(signals)
             : {
-                model: getModel(requested),
-                task: research ? "Web research" : "Manual",
-                reason: "model chosen by you",
+                model: getModel(chosen),
+                task: research ? "Web research" : agent ? "Agent" : "Manual",
+                reason: agentModel ? `pinned by the "${agent?.name}" agent` : "model chosen by you",
               };
-        const model: ModelEntry = decision.model;
+
+        // Image entries are generated through a tool, driven by a chat model.
+        const imageMode = decision.model.endpoint === "image";
+        const imageEntry = decision.model;
+        const model: ModelEntry = imageMode ? getModel(IMAGE_DRIVER_ID) : decision.model;
+
+        // Permissions: an agent may only use the tools it was granted.
+        const granted = new Set<ToolId>(
+          agent
+            ? ((Array.isArray(agent.tools) ? agent.tools : DEFAULT_AGENT_TOOLS) as ToolId[])
+            : ([
+                ...(research ? (["web_search", "open_source"] as ToolId[]) : []),
+                "generate_image",
+              ] as ToolId[]),
+        );
+        const approvalNeeded = (id: ToolId) => Boolean(agent?.require_approval) && isWriteTool(id);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const toolbox: Record<string, any> = {};
+
+        if (granted.has("web_search")) {
+          toolbox["web_search"] = tool({
+            description: "Search the live web and return candidate sources with snippets.",
+            inputSchema: z.object({ query: z.string().describe("The search query") }),
+            execute: async ({ query }) => webSearch(query, 5),
+          });
+        }
+        if (granted.has("open_source")) {
+          toolbox["open_source"] = tool({
+            description: "Open one URL and return its readable text so you can quote and cite it.",
+            inputSchema: z.object({ url: z.string().describe("The full URL of the page to read") }),
+            execute: async ({ url }) => openPage(url),
+          });
+        }
+        if (granted.has("generate_image")) {
+          toolbox["generate_image"] = tool({
+            description:
+              "Create an image from a detailed description. Returns the stored image the user will see.",
+            inputSchema: z.object({
+              prompt: z.string().describe("A detailed visual description of the image to create"),
+            }),
+            ...(approvalNeeded("generate_image") ? { needsApproval: true } : {}),
+            execute: async ({ prompt }) => {
+              const bytes = await generateImageBytes(apiKey, prompt, request.signal);
+              const path = `${userId}/${crypto.randomUUID()}.png`;
+              const { error } = await supabase.storage
+                .from("generated-images")
+                .upload(path, bytes, { contentType: "image/png" });
+              if (error) throw new Error(`The image could not be stored: ${error.message}`);
+              return { path, prompt };
+            },
+          });
+        }
+        if (granted.has("save_memory") && projectId) {
+          toolbox["save_memory"] = tool({
+            description: "Save a durable fact into this project's memory.",
+            inputSchema: z.object({ content: z.string().describe("The fact to remember") }),
+            ...(approvalNeeded("save_memory") ? { needsApproval: true } : {}),
+            execute: async ({ content }) => {
+              const { error } = await supabase
+                .from("project_memory")
+                .insert({ project_id: projectId, user_id: userId, content, source: "agent" });
+              if (error) throw new Error(error.message);
+              return { saved: content };
+            },
+          });
+        }
+        if (granted.has("save_artifact") && projectId) {
+          toolbox["save_artifact"] = tool({
+            description: "Store a finished output as a project artifact.",
+            inputSchema: z.object({
+              title: z.string().describe("A short title for the artifact"),
+              content: z.string().describe("The full artifact content"),
+            }),
+            ...(approvalNeeded("save_artifact") ? { needsApproval: true } : {}),
+            execute: async ({ title, content }) => {
+              const { error } = await supabase.from("project_artifacts").insert({
+                project_id: projectId,
+                user_id: userId,
+                title,
+                content,
+                conversation_id: body.conversationId ?? null,
+              });
+              if (error) throw new Error(error.message);
+              return { saved: title };
+            },
+          });
+        }
+
+        if (agent) {
+          const agentId = agent.id;
+          toolbox["update_plan"] = tool({
+            description:
+              "Record or update the plan for this task. Call it before acting and after each step.",
+            inputSchema: z.object({
+              goal: z.string().describe("The goal in one sentence"),
+              steps: z
+                .array(
+                  z.object({
+                    title: z.string().describe("What this step does"),
+                    status: z.enum(["pending", "active", "done", "skipped"]),
+                  }),
+                )
+                .describe("The ordered steps"),
+            }),
+            execute: async ({ goal, steps }) => {
+              await supabase.from("agent_runs").insert({
+                user_id: userId,
+                agent_id: agentId,
+                conversation_id: body.conversationId ?? null,
+                goal,
+                plan: steps,
+                status: steps.every((s) => s.status === "done" || s.status === "skipped")
+                  ? "complete"
+                  : "running",
+              });
+              return { goal, steps };
+            },
+          });
+        }
 
         const initialRunId = getLovableAiGatewayRunId(request);
         const modelMessages = await convertToModelMessages(messages);
 
         let system = SYSTEM_PROMPT;
-        if (body.projectId) {
-          system += await projectContext(supabase, body.projectId);
-        }
+        if (projectId) system += await projectContext(supabase, projectId);
         if (research) system += `\n\n${RESEARCH_PROMPT}`;
+        if (agent) {
+          system += `\n\n${AGENT_PROMPT}\n\nAgent name: ${agent.name}.`;
+          if (agent.instructions) system += `\nAgent instructions:\n${agent.instructions}`;
+          system += `\nTools you may use: ${[...granted].join(", ") || "none"}.`;
+        }
+        if (imageMode) {
+          system += `\n\nThe user selected the ${imageEntry.label} image model. Call generate_image for their request.`;
+        }
 
-        const researchTools = research
-          ? {
-              web_search: tool({
-                description: "Search the live web and return candidate sources with snippets.",
-                inputSchema: z.object({
-                  query: z.string().describe("The search query"),
-                }),
-                execute: async ({ query }) => webSearch(query, 5),
-              }),
-              open_source: tool({
-                description: "Open one URL and return its readable text so you can quote and cite it.",
-                inputSchema: z.object({
-                  url: z.string().describe("The full URL of the page to read"),
-                }),
-                execute: async ({ url }) => openPage(url),
-              }),
-            }
-          : undefined;
-
+        const hasTools = Object.keys(toolbox).length > 0;
         const shared = {
           system,
           messages: modelMessages,
           abortSignal: request.signal,
-          ...(researchTools ? { tools: researchTools, stopWhen: stepCountIs(50) } : {}),
+          ...(hasTools ? { tools: toolbox, stopWhen: stepCountIs(50) } : {}),
         };
 
         const result =
@@ -210,11 +355,12 @@ export const Route = createFileRoute("/api/chat")({
           messageMetadata: ({ part }) => {
             if (part.type === "start") {
               return {
-                modelId: model.id,
-                modelLabel: model.label,
+                modelId: imageMode ? imageEntry.id : model.id,
+                modelLabel: imageMode ? `${imageEntry.label} + ${model.label}` : model.label,
                 provider: model.provider,
                 task: decision.task,
                 reason: decision.reason,
+                ...(agent ? { agentName: agent.name } : {}),
               };
             }
             if (part.type === "finish") {
