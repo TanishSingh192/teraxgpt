@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { requireUser } from "@/lib/api-auth.server";
+
 const MAX_BYTES = 12 * 1024 * 1024;
 const MODEL = "google/gemini-3.5-transcribe";
 
@@ -7,6 +9,9 @@ export const Route = createFileRoute("/api/transcribe")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const auth = await requireUser(request);
+        if ("response" in auth) return auth.response;
+
         const apiKey = process.env["LOVABLE_API_KEY"];
         if (!apiKey) {
           return Response.json({ error: "Voice is not configured." }, { status: 500 });
