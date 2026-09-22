@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FolderOpen, LogOut, MessageSquare, PanelLeftClose, Plus, Search } from "lucide-react";
+import { Bot, FolderOpen, LogOut, MessageSquare, PanelLeftClose, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
