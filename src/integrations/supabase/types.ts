@@ -14,8 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_runs: {
+        Row: {
+          agent_id: string
+          conversation_id: string | null
+          created_at: string
+          goal: string
+          id: string
+          plan: Json
+          status: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          conversation_id?: string | null
+          created_at?: string
+          goal?: string
+          id?: string
+          plan?: Json
+          status?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          conversation_id?: string | null
+          created_at?: string
+          goal?: string
+          id?: string
+          plan?: Json
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agents: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          instructions: string
+          model_id: string
+          name: string
+          project_id: string | null
+          require_approval: boolean
+          tools: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          instructions?: string
+          model_id?: string
+          name: string
+          project_id?: string | null
+          require_approval?: boolean
+          tools?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          instructions?: string
+          model_id?: string
+          name?: string
+          project_id?: string | null
+          require_approval?: boolean
+          tools?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
+          agent_id: string | null
           created_at: string
           id: string
           model_preference: string
@@ -25,6 +124,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agent_id?: string | null
           created_at?: string
           id?: string
           model_preference?: string
@@ -34,6 +134,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agent_id?: string | null
           created_at?: string
           id?: string
           model_preference?: string
@@ -43,6 +144,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "conversations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "conversations_project_id_fkey"
             columns: ["project_id"]

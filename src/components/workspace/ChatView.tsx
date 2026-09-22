@@ -31,9 +31,43 @@ export type ChatMetadata = {
   provider?: string;
   task?: string;
   reason?: string;
+  agentName?: string;
   inputTokens?: number;
   outputTokens?: number;
 };
+
+type AgentOption = { id: string; name: string };
+
+type PlanStep = { title: string; status: "pending" | "active" | "done" | "skipped" };
+
+function GeneratedImage({ path, prompt }: { path: string; prompt: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void supabase.storage
+      .from("generated-images")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => {
+        if (alive) setUrl(data?.signedUrl ?? null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [path]);
+  if (!url) {
+    return (
+      <div className="mb-3 grid h-52 w-full max-w-[420px] place-items-center rounded-xl bg-background text-[12px] text-subtle">
+        Preparing image…
+      </div>
+    );
+  }
+  return (
+    <figure className="mb-3">
+      <img src={url} alt={prompt} className="w-full max-w-[420px] rounded-xl" />
+      <figcaption className="mt-1.5 text-[11px] text-subtle">{prompt}</figcaption>
+    </figure>
+  );
+}
 
 export type AppMessage = UIMessage<ChatMetadata>;
 
@@ -68,6 +102,48 @@ function researchSteps(message: AppMessage): ResearchStep[] {
   return steps;
 }
 
+type ToolPart = {
+  type: string;
+  state?: string;
+  toolCallId?: string;
+  approval?: { id: string; approved?: boolean; reason?: string };
+  input?: Record<string, unknown>;
+  output?: Record<string, unknown>;
+};
+
+function toolParts(message: AppMessage): ToolPart[] {
+  return (message.parts as ToolPart[]).filter((p) => p.type.startsWith("tool-"));
+}
+
+function generatedImages(message: AppMessage) {
+  return toolParts(message)
+    .filter((p) => p.type === "tool-generate_image" && p.state === "output-available")
+    .map((p) => ({
+      path: String(p.output?.["path"] ?? ""),
+      prompt: String(p.output?.["prompt"] ?? "Generated image"),
+    }))
+    .filter((image) => image.path.length > 0);
+}
+
+function planOf(message: AppMessage): { goal: string; steps: PlanStep[] } | null {
+  const plans = toolParts(message).filter((p) => p.type === "tool-update_plan" && p.input);
+  const latest = plans[plans.length - 1];
+  if (!latest) return null;
+  const steps = (latest.input?.["steps"] ?? []) as PlanStep[];
+  if (!Array.isArray(steps) || steps.length === 0) return null;
+  return { goal: String(latest.input?.["goal"] ?? "Plan"), steps };
+}
+
+function pendingApprovals(message: AppMessage) {
+  return toolParts(message)
+    .filter((p) => p.state === "approval-requested" && p.approval?.id)
+    .map((p) => ({
+      id: p.approval!.id,
+      tool: p.type.replace("tool-", ""),
+      input: p.input ?? {},
+    }));
+}
+
 export function ChatView({
   conversationId,
   initialMessages,
@@ -100,6 +176,9 @@ export function ChatView({
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [agentId, setAgentId] = useState<string>("");
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+
 
   const modelRef = useRef(modelId);
   modelRef.current = modelId;
@@ -109,6 +188,8 @@ export function ChatView({
   projectRef.current = projectId;
   const voiceRef = useRef(voiceReplies);
   voiceRef.current = voiceReplies;
+  const agentRef = useRef(agentId);
+  agentRef.current = agentId;
   const conversationRef = useRef<string | null>(conversationId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -127,6 +208,18 @@ export function ChatView({
 
   useEffect(() => () => speechRef.current?.abort(), []);
 
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const query = supabase.from("agents").select("id,name").order("created_at", { ascending: false });
+      const { data } = projectId ? await query.eq("project_id", projectId) : await query;
+      if (alive) setAgents((data ?? []) as AgentOption[]);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [projectId]);
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport<AppMessage>({
@@ -140,6 +233,8 @@ export function ChatView({
               modelId: modelRef.current,
               research: researchRef.current,
               projectId: projectRef.current,
+              agentId: agentRef.current || null,
+              conversationId: conversationRef.current,
             },
           };
         },

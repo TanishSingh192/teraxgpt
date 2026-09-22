@@ -15,6 +15,13 @@
       "when": 1790067785612,
       "tag": "0001_create_projects_workspace",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790069535868,
+      "tag": "0002_create_agents_and_image_storage",
+      "breakpoints": true
     }
   ]
 }
