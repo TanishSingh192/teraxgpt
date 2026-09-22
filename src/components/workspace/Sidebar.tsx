@@ -1,5 +1,15 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Bot, FolderOpen, LogOut, MessageSquare, PanelLeftClose, Plus, Search } from "lucide-react";
+import {
+  Bot,
+  FolderOpen,
+  LogOut,
+  MessageSquare,
+  PanelLeftClose,
+  Plus,
+  Search,
+  Settings,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +26,7 @@ export function Sidebar({
   activeId,
   onSelect,
   onNew,
+  onDelete,
   userName,
   userEmail,
   mobileOpen,
@@ -25,6 +36,7 @@ export function Sidebar({
   activeId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
+  onDelete: (id: string) => void;
   userName: string;
   userEmail: string;
   mobileOpen: boolean;
