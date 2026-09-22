@@ -69,6 +69,19 @@
   --destructive: oklch(0.577 0.245 27.325);
 }
 
+.dark {
+  --background: oklch(0.216 0.008 258);
+  --foreground: oklch(0.955 0.004 258);
+  --ink: oklch(0.955 0.004 258);
+  --subtle: oklch(0.706 0.017 261);
+  --line: oklch(0.31 0.01 260);
+  --panel: oklch(0.258 0.009 259);
+  --signal: oklch(0.68 0.16 258);
+  --signal-soft: oklch(0.33 0.05 259);
+  --code-bg: oklch(0.18 0.01 259);
+  --destructive: oklch(0.63 0.2 27);
+}
+
 @utility mesh-canvas {
   background:
     radial-gradient(1100px 720px at 10% -12%, #dbe6ff 0%, rgba(219, 230, 255, 0) 55%),
