@@ -242,6 +242,7 @@ export const Route = createFileRoute("/api/chat")({
             : ([
                 ...(research ? (["web_search", "open_source"] as ToolId[]) : []),
                 "generate_image",
+                "save_memory",
               ] as ToolId[]),
         );
         const approvalNeeded = (id: ToolId) => Boolean(agent?.require_approval) && isWriteTool(id);
@@ -282,15 +283,20 @@ export const Route = createFileRoute("/api/chat")({
             },
           });
         }
-        if (granted.has("save_memory") && projectId) {
+        if (granted.has("save_memory")) {
           toolbox["save_memory"] = tool({
-            description: "Save a durable fact into this project's memory.",
+            description:
+              "Remember a durable fact the user shares about themselves, their preferences or their work, so later chats can use it. Only save things worth remembering long term.",
             inputSchema: z.object({ content: z.string().describe("The fact to remember") }),
             ...(approvalNeeded("save_memory") ? { needsApproval: true } : {}),
             execute: async ({ content }) => {
-              const { error } = await supabase
-                .from("project_memory")
-                .insert({ project_id: projectId, user_id: userId, content, source: "agent" });
+              const { error } = projectId
+                ? await supabase
+                    .from("project_memory")
+                    .insert({ project_id: projectId, user_id: userId, content, source: "agent" })
+                : await supabase
+                    .from("user_memory")
+                    .insert({ user_id: userId, content, source: "assistant" });
               if (error) throw new Error(error.message);
               return { saved: content };
             },
