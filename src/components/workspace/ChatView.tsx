@@ -224,6 +224,21 @@ export function ChatView({
     };
   }, [projectId]);
 
+  useEffect(() => {
+    let alive = true;
+    void supabase
+      .from("skills")
+      .select("id,name")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (alive) setSkills((data ?? []) as AgentOption[]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport<AppMessage>({
