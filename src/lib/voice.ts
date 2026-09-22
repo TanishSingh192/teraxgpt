@@ -1,6 +1,20 @@
 // Browser-side voice capture and streaming playback.
 import { createParser } from "eventsource-parser";
 
+import { supabase } from "@/integrations/supabase/client";
+
+/** Voice runs on the user's own account, so every call carries their session. */
+async function authHeaders(): Promise<Record<string, string>> {
+  let { data } = await supabase.auth.getSession();
+  if (!data.session?.access_token) {
+    const refreshed = await supabase.auth.refreshSession();
+    if (refreshed.data.session) data = { session: refreshed.data.session };
+  }
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Please sign in again to use voice.");
+  return { Authorization: `Bearer ${token}` };
+}
+
 function encodeWav(chunks: readonly Float32Array[], sampleRate: number): Blob {
   const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
   const bytes = new ArrayBuffer(44 + length * 2);
@@ -80,6 +94,7 @@ export async function transcribeAudio(file: File, signal?: AbortSignal): Promise
   form.append("file", file, file.name);
   const response = await fetch("/api/transcribe", {
     method: "POST",
+    headers: await authHeaders(),
     body: form,
     ...(signal ? { signal } : {}),
   });
