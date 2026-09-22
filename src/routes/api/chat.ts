@@ -111,23 +111,67 @@ export const Route = createFileRoute("/api/chat")({
           });
         }
 
-        const body = (await request.json()) as { messages: UIMessage[]; modelId?: string };
+        const body = (await request.json()) as {
+          messages: UIMessage[];
+          modelId?: string;
+          research?: boolean;
+          projectId?: string | null;
+        };
         const messages = body.messages ?? [];
         const requested = body.modelId ?? AUTO;
+        const research = body.research === true;
 
         const signals = describe(messages);
         const decision =
           requested === AUTO
-            ? routeRequest(signals)
+            ? research
+              ? {
+                  model: getModel("openai/gpt-6-astra"),
+                  task: "Web research",
+                  reason: "research mode — routed to a tool-using reasoning model",
+                }
+              : routeRequest(signals)
             : {
                 model: getModel(requested),
-                task: "Manual",
+                task: research ? "Web research" : "Manual",
                 reason: "model chosen by you",
               };
         const model: ModelEntry = decision.model;
 
         const initialRunId = getLovableAiGatewayRunId(request);
         const modelMessages = await convertToModelMessages(messages);
+
+        let system = SYSTEM_PROMPT;
+        if (body.projectId) {
+          system += await projectContext(supabase, body.projectId);
+        }
+        if (research) system += `\n\n${RESEARCH_PROMPT}`;
+
+        const researchTools = research
+          ? {
+              web_search: tool({
+                description: "Search the live web and return candidate sources with snippets.",
+                inputSchema: z.object({
+                  query: z.string().describe("The search query"),
+                }),
+                execute: async ({ query }) => webSearch(query, 5),
+              }),
+              open_source: tool({
+                description: "Open one URL and return its readable text so you can quote and cite it.",
+                inputSchema: z.object({
+                  url: z.string().describe("The full URL of the page to read"),
+                }),
+                execute: async ({ url }) => openPage(url),
+              }),
+            }
+          : undefined;
+
+        const shared = {
+          system,
+          messages: modelMessages,
+          abortSignal: request.signal,
+          ...(researchTools ? { tools: researchTools, stopWhen: stepCountIs(50) } : {}),
+        };
 
         const result =
           model.endpoint === "responses"
@@ -144,9 +188,7 @@ export const Route = createFileRoute("/api/chat")({
                 });
                 return streamText({
                   model: lovable.responses(model.id),
-                  system: SYSTEM_PROMPT,
-                  messages: modelMessages,
-                  abortSignal: request.signal,
+                  ...shared,
                   providerOptions: {
                     openai: {
                       forceReasoning: true,
@@ -160,9 +202,7 @@ export const Route = createFileRoute("/api/chat")({
               })()
             : streamText({
                 model: createLovableAiGatewayProvider(apiKey, initialRunId)(model.id),
-                system: SYSTEM_PROMPT,
-                messages: modelMessages,
-                abortSignal: request.signal,
+                ...shared,
               });
 
         return result.toUIMessageStreamResponse({
