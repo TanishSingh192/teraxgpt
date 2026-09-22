@@ -225,15 +225,24 @@ export function ChatView({
       new DefaultChatTransport<AppMessage>({
         api: "/api/chat",
         prepareSendMessagesRequest: async ({ messages }) => {
-          const { data } = await supabase.auth.getSession();
+          let { data } = await supabase.auth.getSession();
+          if (!data.session?.access_token) {
+            const refreshed = await supabase.auth.refreshSession();
+            data = refreshed.data.session ? { session: refreshed.data.session } : data;
+          }
+          const token = data.session?.access_token;
+          if (!token) {
+            throw new Error("Your session expired. Please sign in again to keep chatting.");
+          }
           return {
-            headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` },
+            headers: { Authorization: `Bearer ${token}` },
             body: {
               messages,
               modelId: modelRef.current,
               research: researchRef.current,
               projectId: projectRef.current,
               agentId: agentRef.current || null,
+              skillId: skillRef.current || null,
               conversationId: conversationRef.current,
             },
           };
