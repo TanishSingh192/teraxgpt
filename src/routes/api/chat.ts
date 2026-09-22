@@ -360,6 +360,8 @@ export const Route = createFileRoute("/api/chat")({
         const modelMessages = await convertToModelMessages(messages);
 
         let system = SYSTEM_PROMPT;
+        system += await personalContext(supabase);
+        if (body.skillId) system += await skillContext(supabase, body.skillId);
         if (projectId) system += await projectContext(supabase, projectId);
         if (research) system += `\n\n${RESEARCH_PROMPT}`;
         if (agent) {
