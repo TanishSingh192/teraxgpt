@@ -92,15 +92,25 @@ export function Sidebar({
           <p className="px-3 py-2 text-[12px] text-subtle">No conversations yet</p>
         ) : (
           filteredConversations.map((conversation) => (
-            <Button
-              key={conversation.id}
-              variant="ghost"
-              onClick={() => { onSelect(conversation.id); onClose(); }}
-              className={`${conversation.id === activeId ? "bg-panel text-ink" : "text-subtle"} h-9 w-full justify-start gap-2 px-3 text-[13px] font-normal shadow-none`}
-            >
-              <MessageSquare className="size-3.5" />
-              <span className="truncate">{conversation.title}</span>
-            </Button>
+            <div key={conversation.id} className="group/row relative flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() => { onSelect(conversation.id); onClose(); }}
+                className={`${conversation.id === activeId ? "bg-panel text-ink" : "text-subtle"} h-9 w-full justify-start gap-2 px-3 pr-9 text-[13px] font-normal shadow-none`}
+              >
+                <MessageSquare className="size-3.5" />
+                <span className="truncate">{conversation.title}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Delete ${conversation.title}`}
+                onClick={() => onDelete(conversation.id)}
+                className="absolute right-1 size-7 text-subtle opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover/row:opacity-100"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
           ))
         )}
       </nav>
