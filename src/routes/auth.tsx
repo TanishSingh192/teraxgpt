@@ -78,9 +78,7 @@ function AuthPage() {
     <div className="mesh-canvas flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-[380px]">
         <div className="mb-6 flex items-center gap-2.5">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-ink text-white">
-            <span className="font-display text-[13px] font-semibold">M</span>
-          </div>
+          <img src={logoAsset.url} alt="TeraX CPT logo" className="size-8 rounded-lg" />
           <span className="font-display text-[15px] font-semibold tracking-tight">TeraX CPT</span>
         </div>
 
