@@ -60,6 +60,8 @@ export function ChatView({
   onTitleChange,
   onUsage,
   onOpenSidebar,
+  projectId = null,
+  projectName,
 }: {
   conversationId: string | null;
   initialMessages: AppMessage[];
@@ -69,21 +71,44 @@ export function ChatView({
   onTitleChange: (id: string, title: string) => void;
   onUsage: (cost: number) => void;
   onOpenSidebar: () => void;
+  projectId?: string | null;
+  projectName?: string;
 }) {
   const [modelId, setModelId] = useState<string>(AUTO);
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [turn, setTurn] = useState<TurnInfo | null>(null);
+  const [research, setResearch] = useState(false);
+  const [voiceReplies, setVoiceReplies] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   const modelRef = useRef(modelId);
   modelRef.current = modelId;
+  const researchRef = useRef(research);
+  researchRef.current = research;
+  const projectRef = useRef(projectId);
+  projectRef.current = projectId;
+  const voiceRef = useRef(voiceReplies);
+  voiceRef.current = voiceReplies;
   const conversationRef = useRef<string | null>(conversationId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recorderRef = useRef<{ stop: () => Promise<File>; cancel: () => void } | null>(null);
+  const speechRef = useRef<AbortController | null>(null);
+
+  function interruptSpeech() {
+    speechRef.current?.abort();
+    speechRef.current = null;
+    setSpeaking(false);
+  }
 
   useEffect(() => {
     conversationRef.current = conversationId;
   }, [conversationId]);
+
+  useEffect(() => () => speechRef.current?.abort(), []);
 
   const transport = useMemo(
     () =>
@@ -93,7 +118,12 @@ export function ChatView({
           const { data } = await supabase.auth.getSession();
           return {
             headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` },
-            body: { messages, modelId: modelRef.current },
+            body: {
+              messages,
+              modelId: modelRef.current,
+              research: researchRef.current,
+              projectId: projectRef.current,
+            },
           };
         },
       }),
