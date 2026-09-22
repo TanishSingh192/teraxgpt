@@ -8,6 +8,13 @@
       "when": 1790021095190,
       "tag": "0000_create_chat_workspace",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790067785612,
+      "tag": "0001_create_projects_workspace",
+      "breakpoints": true
     }
   ]
 }

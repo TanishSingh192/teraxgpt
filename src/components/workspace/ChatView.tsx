@@ -1,7 +1,21 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, Bot, ChevronDown, Menu, Paperclip, RotateCcw, Square, X } from "lucide-react";
+import {
+  ArrowUp,
+  Bot,
+  ChevronDown,
+  Globe,
+  Loader2,
+  Menu,
+  Mic,
+  Paperclip,
+  RotateCcw,
+  Square,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Markdown } from "@/components/workspace/Markdown";
@@ -9,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import type { TurnInfo } from "@/components/workspace/ContextPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { AUTO, MODELS, estimateCost, getModel } from "@/lib/models";
+import { speak, startRecording, transcribeAudio } from "@/lib/voice";
 
 export type ChatMetadata = {
   modelId?: string;
@@ -36,6 +51,23 @@ function textOf(message: AppMessage) {
     .join("\n");
 }
 
+type ResearchStep = { kind: "search" | "read"; label: string; pending: boolean };
+
+function researchSteps(message: AppMessage): ResearchStep[] {
+  const steps: ResearchStep[] = [];
+  for (const raw of message.parts) {
+    const part = raw as { type: string; state?: string; input?: Record<string, unknown> };
+    if (part.type !== "tool-web_search" && part.type !== "tool-open_source") continue;
+    const pending = part.state !== "output-available" && part.state !== "output-error";
+    if (part.type === "tool-web_search") {
+      steps.push({ kind: "search", label: String(part.input?.["query"] ?? "…"), pending });
+    } else {
+      steps.push({ kind: "read", label: String(part.input?.["url"] ?? "…"), pending });
+    }
+  }
+  return steps;
+}
+
 export function ChatView({
   conversationId,
   initialMessages,
@@ -45,6 +77,8 @@ export function ChatView({
   onTitleChange,
   onUsage,
   onOpenSidebar,
+  projectId = null,
+  projectName,
 }: {
   conversationId: string | null;
   initialMessages: AppMessage[];
@@ -54,21 +88,44 @@ export function ChatView({
   onTitleChange: (id: string, title: string) => void;
   onUsage: (cost: number) => void;
   onOpenSidebar: () => void;
+  projectId?: string | null;
+  projectName?: string;
 }) {
   const [modelId, setModelId] = useState<string>(AUTO);
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [turn, setTurn] = useState<TurnInfo | null>(null);
+  const [research, setResearch] = useState(false);
+  const [voiceReplies, setVoiceReplies] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   const modelRef = useRef(modelId);
   modelRef.current = modelId;
+  const researchRef = useRef(research);
+  researchRef.current = research;
+  const projectRef = useRef(projectId);
+  projectRef.current = projectId;
+  const voiceRef = useRef(voiceReplies);
+  voiceRef.current = voiceReplies;
   const conversationRef = useRef<string | null>(conversationId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recorderRef = useRef<{ stop: () => Promise<File>; cancel: () => void } | null>(null);
+  const speechRef = useRef<AbortController | null>(null);
+
+  function interruptSpeech() {
+    speechRef.current?.abort();
+    speechRef.current = null;
+    setSpeaking(false);
+  }
 
   useEffect(() => {
     conversationRef.current = conversationId;
   }, [conversationId]);
+
+  useEffect(() => () => speechRef.current?.abort(), []);
 
   const transport = useMemo(
     () =>
@@ -78,7 +135,12 @@ export function ChatView({
           const { data } = await supabase.auth.getSession();
           return {
             headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` },
-            body: { messages, modelId: modelRef.current },
+            body: {
+              messages,
+              modelId: modelRef.current,
+              research: researchRef.current,
+              projectId: projectRef.current,
+            },
           };
         },
       }),
@@ -90,6 +152,26 @@ export function ChatView({
     messages: initialMessages,
     onFinish: async ({ message }) => {
       const meta = message.metadata ?? {};
+      const spokenText = textOf(message).slice(0, 4000);
+      if (voiceRef.current && spokenText.trim()) {
+        interruptSpeech();
+        const controller = new AbortController();
+        speechRef.current = controller;
+        setSpeaking(true);
+        void speak(spokenText, controller.signal)
+          .catch((speechError: unknown) => {
+            if (controller.signal.aborted) return;
+            toast.error(
+              speechError instanceof Error ? speechError.message : "Could not read that aloud.",
+            );
+          })
+          .finally(() => {
+            if (speechRef.current === controller) {
+              speechRef.current = null;
+              setSpeaking(false);
+            }
+          });
+      }
       const model = getModel(meta.modelId ?? MODELS[0]!.id);
       const cost = estimateCost(model, meta.inputTokens ?? 0, meta.outputTokens ?? 0);
       setTurn({ ...meta, cost });
@@ -147,9 +229,39 @@ export function ChatView({
     return out;
   }, [messages]);
 
+  async function toggleRecording() {
+    interruptSpeech();
+    if (recording) {
+      const recorder = recorderRef.current;
+      recorderRef.current = null;
+      setRecording(false);
+      if (!recorder) return;
+      setTranscribing(true);
+      try {
+        const audio = await recorder.stop();
+        const transcript = await transcribeAudio(audio);
+        setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      } catch (recordError) {
+        toast.error(
+          recordError instanceof Error ? recordError.message : "Could not use that recording.",
+        );
+      } finally {
+        setTranscribing(false);
+      }
+      return;
+    }
+    try {
+      recorderRef.current = await startRecording();
+      setRecording(true);
+    } catch {
+      toast.error("Microphone access was blocked. Allow it in your browser to speak.");
+    }
+  }
+
   async function handleSend() {
     const text = input.trim();
     if ((!text && files.length === 0) || busy) return;
+    interruptSpeech();
 
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth.user?.id;
@@ -160,7 +272,7 @@ export function ChatView({
     if (!convId) {
       const { data, error: createError } = await supabase
         .from("conversations")
-        .insert({ user_id: userId, title, model_preference: modelId })
+        .insert({ user_id: userId, title, model_preference: modelId, project_id: projectId })
         .select("id")
         .single();
       if (createError || !data) {
@@ -205,7 +317,30 @@ export function ChatView({
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
           </label>
+          {projectName && (
+            <span className="truncate rounded-lg bg-background px-2.5 py-1 text-[12px] text-subtle">
+              {projectName}
+            </span>
+          )}
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (voiceReplies) interruptSpeech();
+                setVoiceReplies(!voiceReplies);
+              }}
+              aria-pressed={voiceReplies}
+              className={voiceReplies ? "text-ink" : "text-subtle"}
+            >
+              {voiceReplies ? <Volume2 /> : <VolumeX />}
+              {voiceReplies ? "Voice on" : "Voice off"}
+            </Button>
+            {speaking && (
+              <Button variant="ghost" size="sm" onClick={interruptSpeech}>
+                <Square /> Interrupt
+              </Button>
+            )}
             {busy ? (
               <Button variant="ghost" size="sm" onClick={() => stop()}><Square /> Stop</Button>
             ) : (
@@ -268,6 +403,20 @@ export function ChatView({
                     <div className="mb-2 flex items-center gap-2 text-[12px] font-medium text-ink">
                       Multiform
                     </div>
+                    {researchSteps(message).length > 0 && (
+                      <div className="mb-3 space-y-1 rounded-xl bg-background px-3 py-2.5">
+                        <div className="text-[11px] font-medium text-subtle">Research trail</div>
+                        {researchSteps(message).map((step, index) => (
+                          <div key={index} className="flex items-center gap-2 text-[12px] text-ink">
+                            <Globe className="size-3.5 shrink-0 text-subtle" />
+                            <span className="truncate">
+                              {step.kind === "search" ? `Searched: ${step.label}` : `Read: ${step.label}`}
+                            </span>
+                            {step.pending && <span className="text-[11px] text-subtle">…</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <Markdown>{textOf(message)}</Markdown>
                     {message.metadata?.modelLabel && <div className="mt-3 text-[11px] text-subtle">{message.metadata.modelLabel} · {message.metadata.reason}</div>}
                   </div>
@@ -344,6 +493,33 @@ export function ChatView({
                     aria-label="Attach a file"
                   >
                     <Paperclip />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void toggleRecording()}
+                    disabled={transcribing}
+                    aria-pressed={recording}
+                    aria-label={recording ? "Stop recording" : "Speak your message"}
+                    className={recording ? "text-signal" : "text-subtle"}
+                  >
+                    {transcribing ? (
+                      <Loader2 className="animate-spin" />
+                    ) : recording ? (
+                      <Square />
+                    ) : (
+                      <Mic />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setResearch(!research)}
+                    aria-pressed={research}
+                    className={`gap-1.5 rounded-lg px-2 text-[12px] ${research ? "bg-signal-soft text-ink" : "text-subtle"}`}
+                  >
+                    <Globe className="size-3.5" />
+                    Research
                   </Button>
                 </div>
                 <textarea
