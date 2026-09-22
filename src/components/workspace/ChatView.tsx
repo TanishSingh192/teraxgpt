@@ -425,6 +425,24 @@ export function ChatView({
               {projectName}
             </span>
           )}
+          {agents.length > 0 && (
+            <label className="relative flex items-center">
+              <select
+                value={agentId}
+                onChange={(event) => setAgentId(event.target.value)}
+                aria-label="Agent"
+                className={`appearance-none rounded-lg py-1.5 pl-2.5 pr-7 text-[12px] outline-none hover:bg-background ${agentId ? "bg-signal-soft text-ink" : "bg-transparent text-subtle"}`}
+              >
+                <option value="">No agent</option>
+                {agents.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
+            </label>
+          )}
           <div className="ml-auto flex items-center gap-2">
             <Button
               variant="ghost"
