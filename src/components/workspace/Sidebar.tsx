@@ -90,6 +90,15 @@ export function Sidebar({
         Agents
       </Link>
 
+      <Link
+        to="/settings"
+        onClick={onClose}
+        className="mt-0.5 flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] text-subtle hover:bg-panel"
+      >
+        <Settings className="size-3.5" />
+        Settings
+      </Link>
+
 
       <label className="mt-3 flex h-9 items-center gap-2 rounded-lg px-3 text-subtle focus-within:bg-panel">
         <Search className="size-4" />
