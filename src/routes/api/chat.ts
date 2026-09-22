@@ -150,6 +150,27 @@ function describe(messages: UIMessage[]) {
   };
 }
 
+const MAX_TURNS = 200;
+
+/**
+ * Keeps only conversation turns the caller is allowed to supply.
+ * Any "system" (or otherwise unexpected) role is dropped so the caller cannot
+ * inject instructions that would override the server's own system prompt.
+ */
+function sanitizeMessages(incoming: unknown): UIMessage[] {
+  if (!Array.isArray(incoming)) return [];
+  return incoming
+    .filter(
+      (message): message is UIMessage =>
+        Boolean(message) &&
+        typeof message === "object" &&
+        ((message as UIMessage).role === "user" || (message as UIMessage).role === "assistant") &&
+        Array.isArray((message as UIMessage).parts),
+    )
+    .slice(-MAX_TURNS)
+    .map((message) => ({ ...message, role: message.role === "user" ? "user" : "assistant" }));
+}
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
@@ -195,7 +216,8 @@ export const Route = createFileRoute("/api/chat")({
           skillId?: string | null;
           conversationId?: string | null;
         };
-        const messages = body.messages ?? [];
+        // The server owns the instructions: callers may only send user/assistant turns.
+        const messages = sanitizeMessages(body.messages);
         const requested = body.modelId ?? AUTO;
         const research = body.research === true;
 

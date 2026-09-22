@@ -1,21 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { requireUser } from "@/lib/api-auth.server";
+
 const MODEL = "google/gemini-3.1-flash-tts-preview";
 const VOICE = "Kore";
+const MAX_CHARS = 4000;
 
 export const Route = createFileRoute("/api/speak")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const auth = await requireUser(request);
+        if ("response" in auth) return auth.response;
+
         const apiKey = process.env["LOVABLE_API_KEY"];
         if (!apiKey) {
           return Response.json({ error: "Voice is not configured." }, { status: 500 });
         }
 
-        const body = (await request.json()) as { text?: string };
-        const text = (body.text ?? "").trim();
+        const body = (await request.json().catch(() => null)) as { text?: unknown } | null;
+        const text = typeof body?.text === "string" ? body.text.trim() : "";
         if (!text) {
           return Response.json({ error: "Nothing to read aloud." }, { status: 400 });
+        }
+        if (text.length > MAX_CHARS) {
+          return Response.json({ error: "That text is too long to read aloud." }, { status: 400 });
         }
 
         try {
