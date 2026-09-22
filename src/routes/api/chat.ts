@@ -1,19 +1,64 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createClient } from "@supabase/supabase-js";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "ai";
+import { z } from "zod";
 
 import {
   createLovableAiGatewayProvider,
   createLovableAiGatewayRunIdFetch,
   getLovableAiGatewayRunId,
 } from "@/lib/ai-gateway.server";
+import { openPage, webSearch } from "@/lib/firecrawl.server";
 import { AUTO, getModel, routeRequest, type ModelEntry } from "@/lib/models";
 
 const SYSTEM_PROMPT = `You are Multiform, a unified AI workspace assistant.
 Be direct and useful. Use markdown: headings, bullet lists, tables and fenced code blocks with a language tag.
 When you are uncertain, say so plainly instead of inventing facts, sources or numbers.
 Never claim to have used a tool, browsed the web, or read a file that was not provided to you.`;
+
+const RESEARCH_PROMPT = `Web research mode is ON. You have two tools:
+- web_search: find candidate sources for a query.
+- open_source: read the full text of one URL.
+Work like a researcher: search, open at least two promising sources, extract the specific facts you need,
+cross-check any claim that matters against a second independent source, and note disagreements explicitly.
+Cite every non-obvious claim inline as a markdown link to the exact page you read, and finish with a
+"Sources" list of the pages you actually opened. Never cite a page you did not open, and never invent a URL.`;
+
+async function projectContext(supabase: SupabaseClient, projectId: string) {
+  const [project, files, memory] = await Promise.all([
+    supabase.from("projects").select("name,description,instructions").eq("id", projectId).maybeSingle(),
+    supabase.from("project_files").select("name,content").eq("project_id", projectId).limit(12),
+    supabase
+      .from("project_memory")
+      .select("content")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(30),
+  ]);
+
+  const row = project.data as { name?: string; description?: string; instructions?: string } | null;
+  if (!row) return "";
+
+  const fileRows = (files.data ?? []) as { name: string; content: string }[];
+  const memoryRows = (memory.data ?? []) as { content: string }[];
+
+  return [
+    `\n\nYou are working inside the project "${row.name}".`,
+    row.description ? `Project description: ${row.description}` : "",
+    row.instructions ? `Project instructions (follow them):\n${row.instructions}` : "",
+    memoryRows.length
+      ? `Project memory (durable facts the user saved):\n${memoryRows.map((m) => `- ${m.content}`).join("\n")}`
+      : "",
+    fileRows.length
+      ? `Project files:\n${fileRows
+          .map((f) => `--- ${f.name} ---\n${f.content.slice(0, 8000)}`)
+          .join("\n\n")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
 
 function describe(messages: UIMessage[]) {
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
