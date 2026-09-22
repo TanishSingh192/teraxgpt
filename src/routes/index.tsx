@@ -107,6 +107,14 @@ function Workspace() {
     setChatKey(id);
   }
 
+  async function deleteConversation(id: string) {
+    if (!window.confirm("Delete this chat? This cannot be undone.")) return;
+    await supabase.from("messages").delete().eq("conversation_id", id);
+    await supabase.from("conversations").delete().eq("id", id);
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (activeId === id) newChat();
+  }
+
   function newChat() {
     setInitialMessages([]);
     setActiveId(null);
@@ -135,6 +143,7 @@ function Workspace() {
           activeId={activeId}
           onSelect={(id) => void openConversation(id)}
           onNew={newChat}
+          onDelete={(id) => void deleteConversation(id)}
           userName={displayName}
           userEmail={user?.email ?? ""}
           mobileOpen={sidebarOpen}

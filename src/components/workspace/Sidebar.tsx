@@ -1,5 +1,15 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Bot, FolderOpen, LogOut, MessageSquare, PanelLeftClose, Plus, Search } from "lucide-react";
+import {
+  Bot,
+  FolderOpen,
+  LogOut,
+  MessageSquare,
+  PanelLeftClose,
+  Plus,
+  Search,
+  Settings,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +26,7 @@ export function Sidebar({
   activeId,
   onSelect,
   onNew,
+  onDelete,
   userName,
   userEmail,
   mobileOpen,
@@ -25,6 +36,7 @@ export function Sidebar({
   activeId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
+  onDelete: (id: string) => void;
   userName: string;
   userEmail: string;
   mobileOpen: boolean;
@@ -78,6 +90,15 @@ export function Sidebar({
         Agents
       </Link>
 
+      <Link
+        to="/settings"
+        onClick={onClose}
+        className="mt-0.5 flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] text-subtle hover:bg-panel"
+      >
+        <Settings className="size-3.5" />
+        Settings
+      </Link>
+
 
       <label className="mt-3 flex h-9 items-center gap-2 rounded-lg px-3 text-subtle focus-within:bg-panel">
         <Search className="size-4" />
@@ -92,15 +113,25 @@ export function Sidebar({
           <p className="px-3 py-2 text-[12px] text-subtle">No conversations yet</p>
         ) : (
           filteredConversations.map((conversation) => (
-            <Button
-              key={conversation.id}
-              variant="ghost"
-              onClick={() => { onSelect(conversation.id); onClose(); }}
-              className={`${conversation.id === activeId ? "bg-panel text-ink" : "text-subtle"} h-9 w-full justify-start gap-2 px-3 text-[13px] font-normal shadow-none`}
-            >
-              <MessageSquare className="size-3.5" />
-              <span className="truncate">{conversation.title}</span>
-            </Button>
+            <div key={conversation.id} className="group/row relative flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() => { onSelect(conversation.id); onClose(); }}
+                className={`${conversation.id === activeId ? "bg-panel text-ink" : "text-subtle"} h-9 w-full justify-start gap-2 px-3 pr-9 text-[13px] font-normal shadow-none`}
+              >
+                <MessageSquare className="size-3.5" />
+                <span className="truncate">{conversation.title}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Delete ${conversation.title}`}
+                onClick={() => onDelete(conversation.id)}
+                className="absolute right-1 size-7 text-subtle opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover/row:opacity-100"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
           ))
         )}
       </nav>

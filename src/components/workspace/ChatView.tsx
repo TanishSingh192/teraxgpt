@@ -178,6 +178,8 @@ export function ChatView({
   const [speaking, setSpeaking] = useState(false);
   const [agentId, setAgentId] = useState<string>("");
   const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [skillId, setSkillId] = useState<string>("");
+  const [skills, setSkills] = useState<AgentOption[]>([]);
 
 
   const modelRef = useRef(modelId);
@@ -190,6 +192,8 @@ export function ChatView({
   voiceRef.current = voiceReplies;
   const agentRef = useRef(agentId);
   agentRef.current = agentId;
+  const skillRef = useRef(skillId);
+  skillRef.current = skillId;
   const conversationRef = useRef<string | null>(conversationId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -220,20 +224,44 @@ export function ChatView({
     };
   }, [projectId]);
 
+  useEffect(() => {
+    let alive = true;
+    void supabase
+      .from("skills")
+      .select("id,name")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (alive) setSkills((data ?? []) as AgentOption[]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport<AppMessage>({
         api: "/api/chat",
         prepareSendMessagesRequest: async ({ messages }) => {
-          const { data } = await supabase.auth.getSession();
+          let { data } = await supabase.auth.getSession();
+          if (!data.session?.access_token) {
+            const refreshed = await supabase.auth.refreshSession();
+            data = refreshed.data.session ? { session: refreshed.data.session } : data;
+          }
+          const token = data.session?.access_token;
+          if (!token) {
+            throw new Error("Your session expired. Please sign in again to keep chatting.");
+          }
           return {
-            headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` },
+            headers: { Authorization: `Bearer ${token}` },
             body: {
               messages,
               modelId: modelRef.current,
               research: researchRef.current,
               projectId: projectRef.current,
               agentId: agentRef.current || null,
+              skillId: skillRef.current || null,
               conversationId: conversationRef.current,
             },
           };
@@ -713,6 +741,24 @@ export function ChatView({
                     <Globe className="size-3.5" />
                     Research
                   </Button>
+                  {skills.length > 0 && (
+                    <label className="relative flex items-center">
+                      <select
+                        value={skillId}
+                        onChange={(event) => setSkillId(event.target.value)}
+                        aria-label="Skill"
+                        className={`appearance-none rounded-lg py-1.5 pl-2.5 pr-7 text-[12px] outline-none hover:bg-background ${skillId ? "bg-signal-soft text-ink" : "bg-transparent text-subtle"}`}
+                      >
+                        <option value="">No skill</option>
+                        {skills.map((skill) => (
+                          <option key={skill.id} value={skill.id}>
+                            {skill.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
+                    </label>
+                  )}
                 </div>
                 <textarea
                   rows={1}

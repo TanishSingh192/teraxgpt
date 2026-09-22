@@ -45,6 +45,60 @@ type AgentRow = {
   project_id: string | null;
 };
 
+type SettingsRow = {
+  display_name: string;
+  occupation: string;
+  traits: string;
+  custom_instructions: string;
+  memory_enabled: boolean;
+};
+
+/** Personalization + durable memory the user controls in Settings. */
+async function personalContext(supabase: SupabaseClient) {
+  const [settings, memory] = await Promise.all([
+    supabase
+      .from("user_settings")
+      .select("display_name,occupation,traits,custom_instructions,memory_enabled")
+      .maybeSingle(),
+    supabase
+      .from("user_memory")
+      .select("content")
+      .order("created_at", { ascending: false })
+      .limit(40),
+  ]);
+
+  const row = (settings.data as SettingsRow | null) ?? null;
+  const memories = (memory.data ?? []) as { content: string }[];
+  const lines: string[] = [];
+
+  if (row?.display_name) lines.push(`The user prefers to be called "${row.display_name}".`);
+  if (row?.occupation) lines.push(`What they do: ${row.occupation}.`);
+  if (row?.traits) lines.push(`How they want you to respond: ${row.traits}.`);
+  if (row?.custom_instructions) lines.push(`Their standing instructions:\n${row.custom_instructions}`);
+  if ((row?.memory_enabled ?? true) && memories.length) {
+    lines.push(
+      `Things you remember about them (use when relevant, never recite the whole list):\n${memories
+        .map((m) => `- ${m.content}`)
+        .join("\n")}`,
+    );
+  }
+
+  return lines.length ? `\n\nAbout this user:\n${lines.join("\n")}` : "";
+}
+
+async function skillContext(supabase: SupabaseClient, skillId: string) {
+  const { data } = await supabase
+    .from("skills")
+    .select("name,description,instructions")
+    .eq("id", skillId)
+    .maybeSingle();
+  const row = data as { name: string; description: string; instructions: string } | null;
+  if (!row) return "";
+  return `\n\nThe user activated the "${row.name}" skill.${
+    row.description ? ` Purpose: ${row.description}.` : ""
+  }\nFollow these skill instructions for this reply:\n${row.instructions}`;
+}
+
 async function projectContext(supabase: SupabaseClient, projectId: string) {
   const [project, files, memory] = await Promise.all([
     supabase.from("projects").select("name,description,instructions").eq("id", projectId).maybeSingle(),
@@ -138,6 +192,7 @@ export const Route = createFileRoute("/api/chat")({
           research?: boolean;
           projectId?: string | null;
           agentId?: string | null;
+          skillId?: string | null;
           conversationId?: string | null;
         };
         const messages = body.messages ?? [];
@@ -187,6 +242,7 @@ export const Route = createFileRoute("/api/chat")({
             : ([
                 ...(research ? (["web_search", "open_source"] as ToolId[]) : []),
                 "generate_image",
+                "save_memory",
               ] as ToolId[]),
         );
         const approvalNeeded = (id: ToolId) => Boolean(agent?.require_approval) && isWriteTool(id);
@@ -227,15 +283,20 @@ export const Route = createFileRoute("/api/chat")({
             },
           });
         }
-        if (granted.has("save_memory") && projectId) {
+        if (granted.has("save_memory")) {
           toolbox["save_memory"] = tool({
-            description: "Save a durable fact into this project's memory.",
+            description:
+              "Remember a durable fact the user shares about themselves, their preferences or their work, so later chats can use it. Only save things worth remembering long term.",
             inputSchema: z.object({ content: z.string().describe("The fact to remember") }),
             ...(approvalNeeded("save_memory") ? { needsApproval: true } : {}),
             execute: async ({ content }) => {
-              const { error } = await supabase
-                .from("project_memory")
-                .insert({ project_id: projectId, user_id: userId, content, source: "agent" });
+              const { error } = projectId
+                ? await supabase
+                    .from("project_memory")
+                    .insert({ project_id: projectId, user_id: userId, content, source: "agent" })
+                : await supabase
+                    .from("user_memory")
+                    .insert({ user_id: userId, content, source: "assistant" });
               if (error) throw new Error(error.message);
               return { saved: content };
             },
@@ -299,6 +360,8 @@ export const Route = createFileRoute("/api/chat")({
         const modelMessages = await convertToModelMessages(messages);
 
         let system = SYSTEM_PROMPT;
+        system += await personalContext(supabase);
+        if (body.skillId) system += await skillContext(supabase, body.skillId);
         if (projectId) system += await projectContext(supabase, projectId);
         if (research) system += `\n\n${RESEARCH_PROMPT}`;
         if (agent) {

@@ -7,4 +7,7 @@
 - [x] Voice input and spoken replies with interruption
 - [x] Image generation in the model selector (create + analyse images in the same chat)
 - [x] Agents: planning, tool execution, per-tool permissions, approval prompts, reusable per project
+- [x] Sign-in error fix (session auto-refresh with a clear message when it can't recover)
+- [x] Delete a chat from the sidebar
+- [x] Settings: personalization, memory, light/dark/system theme, skills, scheduled actions
 - [ ] Meta, NVIDIA, DeepSeek models — blocked: needs rotated credentials and exact model IDs supplied securely
