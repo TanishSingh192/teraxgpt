@@ -1,7 +1,21 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, Bot, ChevronDown, Menu, Paperclip, RotateCcw, Square, X } from "lucide-react";
+import {
+  ArrowUp,
+  Bot,
+  ChevronDown,
+  Globe,
+  Loader2,
+  Menu,
+  Mic,
+  Paperclip,
+  RotateCcw,
+  Square,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Markdown } from "@/components/workspace/Markdown";
@@ -9,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import type { TurnInfo } from "@/components/workspace/ContextPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { AUTO, MODELS, estimateCost, getModel } from "@/lib/models";
+import { speak, startRecording, transcribeAudio } from "@/lib/voice";
 
 export type ChatMetadata = {
   modelId?: string;
