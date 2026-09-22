@@ -255,7 +255,7 @@ export function ChatView({
     if (!convId) {
       const { data, error: createError } = await supabase
         .from("conversations")
-        .insert({ user_id: userId, title, model_preference: modelId })
+        .insert({ user_id: userId, title, model_preference: modelId, project_id: projectId })
         .select("id")
         .single();
       if (createError || !data) {
