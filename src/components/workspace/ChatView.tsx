@@ -300,7 +300,30 @@ export function ChatView({
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
           </label>
+          {projectName && (
+            <span className="truncate rounded-lg bg-background px-2.5 py-1 text-[12px] text-subtle">
+              {projectName}
+            </span>
+          )}
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (voiceReplies) interruptSpeech();
+                setVoiceReplies(!voiceReplies);
+              }}
+              aria-pressed={voiceReplies}
+              className={voiceReplies ? "text-ink" : "text-subtle"}
+            >
+              {voiceReplies ? <Volume2 /> : <VolumeX />}
+              {voiceReplies ? "Voice on" : "Voice off"}
+            </Button>
+            {speaking && (
+              <Button variant="ghost" size="sm" onClick={interruptSpeech}>
+                <Square /> Interrupt
+              </Button>
+            )}
             {busy ? (
               <Button variant="ghost" size="sm" onClick={() => stop()}><Square /> Stop</Button>
             ) : (
