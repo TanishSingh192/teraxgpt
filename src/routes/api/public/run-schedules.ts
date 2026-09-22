@@ -69,8 +69,13 @@ export const Route = createFileRoute("/api/public/run-schedules")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const unauthorized = await authenticateCronRequest(request);
-        if (unauthorized) return unauthorized;
+        // Either the platform cron secret or this app's own scheduler key.
+        const runnerSecret = process.env["SCHEDULE_RUNNER_SECRET"];
+        const bearer = /^Bearer ([^\s,]+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
+        if (!runnerSecret || bearer !== runnerSecret) {
+          const unauthorized = await authenticateCronRequest(request);
+          if (unauthorized) return unauthorized;
+        }
 
         const apiKey = process.env["LOVABLE_API_KEY"];
         if (!apiKey) return new Response("AI is not configured", { status: 500 });
