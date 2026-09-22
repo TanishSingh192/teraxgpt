@@ -80,12 +80,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Multiform · Unified AI workspace" },
+      { title: "TeraX CPT · Unified AI workspace" },
       {
         name: "description",
         content: "One workspace for every AI model, your files and your conversations.",
       },
-      { property: "og:title", content: "Multiform · Unified AI workspace" },
+      { property: "og:title", content: "TeraX CPT · Unified AI workspace" },
       {
         property: "og:description",
         content: "One workspace for every AI model, your files and your conversations.",

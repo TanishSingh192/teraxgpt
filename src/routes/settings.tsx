@@ -12,13 +12,13 @@ import { useTheme, type Theme } from "@/lib/theme";
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Settings · Multiform" },
+      { title: "Settings · TeraX CPT" },
       {
         name: "description",
         content:
-          "Personalize Multiform: how the assistant addresses you, what it remembers, your theme, your skills and your scheduled actions.",
+          "Personalize TeraX CPT: how the assistant addresses you, what it remembers, your theme, your skills and your scheduled actions.",
       },
-      { property: "og:title", content: "Settings · Multiform" },
+      { property: "og:title", content: "Settings · TeraX CPT" },
       {
         property: "og:description",
         content: "Personalization, memory, appearance, skills and scheduled actions.",
@@ -445,7 +445,7 @@ function SettingsPage() {
                     value={scheduleDraft.model_id}
                     onChange={(e) => setScheduleDraft({ ...scheduleDraft, model_id: e.target.value })}
                   >
-                    <option value={AUTO}>Multiform Auto</option>
+                    <option value={AUTO}>TeraX CPT Auto</option>
                     {MODELS.filter((m) => m.endpoint !== "image").map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.label}

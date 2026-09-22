@@ -57,7 +57,7 @@ export function Sidebar({
         <div className="flex size-7 items-center justify-center rounded-lg bg-ink text-primary-foreground">
           <span className="font-display text-[13px] font-semibold">M</span>
         </div>
-        <span className="font-display text-[15px] font-semibold">Multiform</span>
+        <span className="font-display text-[15px] font-semibold">TeraX CPT</span>
         <Button variant="ghost" size="icon" onClick={onClose} className="ml-auto md:hidden" aria-label="Close sidebar">
           <PanelLeftClose />
         </Button>

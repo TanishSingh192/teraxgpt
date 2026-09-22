@@ -47,7 +47,7 @@ async function runOne(row: ScheduleRow, apiKey: string) {
         {
           role: "system",
           content:
-            "You are Multiform running a scheduled action for the user. Answer completely in markdown; there is nobody to ask follow-up questions.",
+            "You are TeraX CPT running a scheduled action for the user. Answer completely in markdown; there is nobody to ask follow-up questions.",
         },
         { role: "user", content: row.prompt },
       ],

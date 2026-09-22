@@ -10,13 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/projects/")({
   head: () => ({
     meta: [
-      { title: "Projects · Multiform" },
+      { title: "Projects · TeraX CPT" },
       {
         name: "description",
         content:
           "Group your work into projects with their own instructions, files, memory, conversations and artifacts.",
       },
-      { property: "og:title", content: "Projects · Multiform" },
+      { property: "og:title", content: "Projects · TeraX CPT" },
       {
         property: "og:description",
         content: "Persistent project workspaces with instructions, files, memory and artifacts.",

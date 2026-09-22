@@ -443,7 +443,7 @@ export function ChatView({
           <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="md:hidden" aria-label="Open sidebar"><Menu /></Button>
           <label className="relative flex items-center">
             <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 font-display text-[15px] font-semibold outline-none hover:bg-background">
-              <option value={AUTO}>Multiform Auto</option>
+              <option value={AUTO}>TeraX CPT Auto</option>
               {MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
@@ -550,7 +550,7 @@ export function ChatView({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="mb-2 flex items-center gap-2 text-[12px] font-medium text-ink">
-                      Multiform
+                      TeraX CPT
                     </div>
                     {researchSteps(message).length > 0 && (
                       <div className="mb-3 space-y-1 rounded-xl bg-background px-3 py-2.5">
@@ -770,7 +770,7 @@ export function ChatView({
                       void handleSend();
                     }
                   }}
-                  placeholder="Message Multiform"
+                  placeholder="Message TeraX CPT"
                   className="max-h-40 min-h-9 flex-1 resize-none bg-transparent py-2 text-[14px] outline-none placeholder:text-subtle"
                 />
                 <Button
@@ -784,7 +784,7 @@ export function ChatView({
                 </Button>
               </div>
             </div>
-            <p className="mt-2 text-center text-[10px] text-subtle">Multiform can make mistakes. Check important information.</p>
+            <p className="mt-2 text-center text-[10px] text-subtle">TeraX CPT can make mistakes. Check important information.</p>
           </div>
         </div>
       </main>

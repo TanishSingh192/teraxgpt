@@ -14,7 +14,7 @@ import { openPage, webSearch } from "@/lib/firecrawl.server";
 import { generateImageBytes } from "@/lib/image.server";
 import { AUTO, IMAGE_DRIVER_ID, getModel, routeRequest, type ModelEntry } from "@/lib/models";
 
-const SYSTEM_PROMPT = `You are Multiform, a unified AI workspace assistant.
+const SYSTEM_PROMPT = `You are TeraX CPT, a unified AI workspace assistant.
 Be direct and useful. Use markdown: headings, bullet lists, tables and fenced code blocks with a language tag.
 When you are uncertain, say so plainly instead of inventing facts, sources or numbers.
 Never claim to have used a tool, browsed the web, or read a file that was not provided to you.
