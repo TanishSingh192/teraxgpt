@@ -69,6 +69,16 @@ export function Sidebar({
         Projects
       </Link>
 
+      <Link
+        to="/agents"
+        onClick={onClose}
+        className="mt-0.5 flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] text-subtle hover:bg-panel"
+      >
+        <Bot className="size-3.5" />
+        Agents
+      </Link>
+
+
       <label className="mt-3 flex h-9 items-center gap-2 rounded-lg px-3 text-subtle focus-within:bg-panel">
         <Search className="size-4" />
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search chats" className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-subtle" />
