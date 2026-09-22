@@ -135,6 +135,26 @@ export function ChatView({
     messages: initialMessages,
     onFinish: async ({ message }) => {
       const meta = message.metadata ?? {};
+      const spokenText = textOf(message).slice(0, 4000);
+      if (voiceRef.current && spokenText.trim()) {
+        interruptSpeech();
+        const controller = new AbortController();
+        speechRef.current = controller;
+        setSpeaking(true);
+        void speak(spokenText, controller.signal)
+          .catch((speechError: unknown) => {
+            if (controller.signal.aborted) return;
+            toast.error(
+              speechError instanceof Error ? speechError.message : "Could not read that aloud.",
+            );
+          })
+          .finally(() => {
+            if (speechRef.current === controller) {
+              speechRef.current = null;
+              setSpeaking(false);
+            }
+          });
+      }
       const model = getModel(meta.modelId ?? MODELS[0]!.id);
       const cost = estimateCost(model, meta.inputTokens ?? 0, meta.outputTokens ?? 0);
       setTurn({ ...meta, cost });
@@ -192,9 +212,39 @@ export function ChatView({
     return out;
   }, [messages]);
 
+  async function toggleRecording() {
+    interruptSpeech();
+    if (recording) {
+      const recorder = recorderRef.current;
+      recorderRef.current = null;
+      setRecording(false);
+      if (!recorder) return;
+      setTranscribing(true);
+      try {
+        const audio = await recorder.stop();
+        const transcript = await transcribeAudio(audio);
+        setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      } catch (recordError) {
+        toast.error(
+          recordError instanceof Error ? recordError.message : "Could not use that recording.",
+        );
+      } finally {
+        setTranscribing(false);
+      }
+      return;
+    }
+    try {
+      recorderRef.current = await startRecording();
+      setRecording(true);
+    } catch {
+      toast.error("Microphone access was blocked. Allow it in your browser to speak.");
+    }
+  }
+
   async function handleSend() {
     const text = input.trim();
     if ((!text && files.length === 0) || busy) return;
+    interruptSpeech();
 
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth.user?.id;
