@@ -1,5 +1,5 @@
-import { useNavigate } from "@tanstack/react-router";
-import { LogOut, MessageSquare, PanelLeftClose, Plus, Search } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { FolderOpen, LogOut, MessageSquare, PanelLeftClose, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,15 @@ export function Sidebar({
         <Plus />
         New chat
       </Button>
+
+      <Link
+        to="/projects"
+        onClick={onClose}
+        className="mt-1.5 flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] text-subtle hover:bg-panel"
+      >
+        <FolderOpen className="size-3.5" />
+        Projects
+      </Link>
 
       <label className="mt-3 flex h-9 items-center gap-2 rounded-lg px-3 text-subtle focus-within:bg-panel">
         <Search className="size-4" />
