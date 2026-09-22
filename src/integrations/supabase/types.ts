@@ -376,6 +376,78 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_actions: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          frequency: string
+          id: string
+          last_result: string | null
+          last_run_at: string | null
+          model_id: string
+          prompt: string
+          run_at_minute: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          frequency?: string
+          id?: string
+          last_result?: string | null
+          last_run_at?: string | null
+          model_id?: string
+          prompt: string
+          run_at_minute?: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          frequency?: string
+          id?: string
+          last_result?: string | null
+          last_run_at?: string | null
+          model_id?: string
+          prompt?: string
+          run_at_minute?: number
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      skills: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          instructions: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          instructions?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          instructions?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       usage_records: {
         Row: {
           conversation_id: string | null
@@ -419,6 +491,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_memory: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          custom_instructions: string
+          display_name: string
+          memory_enabled: boolean
+          occupation: string
+          theme: string
+          traits: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_instructions?: string
+          display_name?: string
+          memory_enabled?: boolean
+          occupation?: string
+          theme?: string
+          traits?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_instructions?: string
+          display_name?: string
+          memory_enabled?: boolean
+          occupation?: string
+          theme?: string
+          traits?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

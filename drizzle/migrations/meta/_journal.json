@@ -22,6 +22,13 @@
       "when": 1790069535868,
       "tag": "0002_create_agents_and_image_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790071620837,
+      "tag": "0003_create_settings_memory_skills_schedules",
+      "breakpoints": true
     }
   ]
 }
