@@ -190,8 +190,8 @@ export async function speak(text: string, signal: AbortSignal): Promise<void> {
     if (context.state === "suspended") await context.resume();
     const response = await fetch("/api/speak", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+      body: JSON.stringify({ text: text.slice(0, 4000) }),
       signal: controller.signal,
     });
     if (!response.ok || !response.body) {
