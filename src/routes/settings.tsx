@@ -135,7 +135,10 @@ function SettingsPage() {
       .insert({ user_id: user.id, content, source: "user" })
       .select("id,content,created_at")
       .single();
-    if (error || !data) return toast.error("Could not save that memory.");
+    if (error || !data) {
+      toast.error("Could not save that memory.");
+      return;
+    }
     setMemories([data as MemoryRow, ...memories]);
     setMemoryDraft("");
   }
@@ -147,7 +150,10 @@ function SettingsPage() {
       .insert({ user_id: user.id, name: "New skill", description: "", instructions: "" })
       .select("id,name,description,instructions")
       .single();
-    if (error || !data) return toast.error("Could not create that skill.");
+    if (error || !data) {
+      toast.error("Could not create that skill.");
+      return;
+    }
     setSkills([data as SkillRow, ...skills]);
   }
 
@@ -168,7 +174,10 @@ function SettingsPage() {
     if (!user) return;
     const title = scheduleDraft.title.trim() || "Scheduled action";
     const prompt = scheduleDraft.prompt.trim();
-    if (!prompt) return toast.error("Write what the assistant should do.");
+    if (!prompt) {
+      toast.error("Write what the assistant should do.");
+      return;
+    }
     const [h, m] = scheduleDraft.time.split(":");
     const { data, error } = await supabase
       .from("scheduled_actions")
@@ -182,7 +191,10 @@ function SettingsPage() {
       })
       .select("id,title,prompt,frequency,run_at_minute,enabled,model_id,last_run_at,last_result")
       .single();
-    if (error || !data) return toast.error("Could not schedule that.");
+    if (error || !data) {
+      toast.error("Could not schedule that.");
+      return;
+    }
     setSchedules([data as ScheduleRow, ...schedules]);
     setScheduleDraft({ title: "", prompt: "", frequency: "daily", time: "08:00", model_id: AUTO });
     toast.success("Scheduled.");
