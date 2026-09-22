@@ -242,7 +242,15 @@ export function ChatView({
     [],
   );
 
-  const { messages, sendMessage, status, error, stop, regenerate } = useChat<AppMessage>({
+  const {
+    messages,
+    sendMessage,
+    status,
+    error,
+    stop,
+    regenerate,
+    addToolApprovalResponse,
+  } = useChat<AppMessage>({
     transport,
     messages: initialMessages,
     onFinish: async ({ message }) => {
