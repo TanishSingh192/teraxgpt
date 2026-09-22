@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import logoAsset from "@/assets/terax-logo.png.asset.json";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
@@ -9,13 +10,13 @@ import { useSession } from "@/hooks/useSession";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in · Multiform AI workspace" },
+      { title: "Sign in · TeraX CPT AI workspace" },
       {
         name: "description",
         content:
-          "Sign in to Multiform, the unified AI workspace with multiple models, files and automatic routing.",
+          "Sign in to TeraX CPT, the unified AI workspace with multiple models, files and automatic routing.",
       },
-      { property: "og:title", content: "Sign in · Multiform AI workspace" },
+      { property: "og:title", content: "Sign in · TeraX CPT AI workspace" },
       {
         property: "og:description",
         content: "One workspace for every AI model, your files and your conversations.",
@@ -78,10 +79,8 @@ function AuthPage() {
     <div className="mesh-canvas flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-[380px]">
         <div className="mb-6 flex items-center gap-2.5">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-ink text-white">
-            <span className="font-display text-[13px] font-semibold">M</span>
-          </div>
-          <span className="font-display text-[15px] font-semibold tracking-tight">Multiform</span>
+          <img src={logoAsset.url} alt="TeraX CPT logo" className="size-8 rounded-lg" />
+          <span className="font-display text-[15px] font-semibold tracking-tight">TeraX CPT</span>
         </div>
 
         <div className="rounded-2xl bg-panel p-6 ring-1 ring-black/5">

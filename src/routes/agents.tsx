@@ -12,13 +12,13 @@ import { AUTO, MODELS } from "@/lib/models";
 export const Route = createFileRoute("/agents")({
   head: () => ({
     meta: [
-      { title: "Agents · Multiform" },
+      { title: "Agents · TeraX CPT" },
       {
         name: "description",
         content:
           "Build reusable agents with their own instructions, model, tool permissions and approval rules.",
       },
-      { property: "og:title", content: "Agents · Multiform" },
+      { property: "og:title", content: "Agents · TeraX CPT" },
       {
         property: "og:description",
         content: "Reusable AI agents that plan, use tools and ask permission before acting.",
@@ -253,7 +253,7 @@ function AgentsPage() {
                       }
                       className="mt-1.5 w-full rounded-xl bg-panel px-3 py-2.5 text-[13px] outline-none"
                     >
-                      <option value={AUTO}>Multiform Auto</option>
+                      <option value={AUTO}>TeraX CPT Auto</option>
                       {MODELS.map((model) => (
                         <option key={model.id} value={model.id}>
                           {model.label}

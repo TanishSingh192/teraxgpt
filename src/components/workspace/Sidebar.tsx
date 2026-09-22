@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import logoAsset from "@/assets/terax-logo.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -54,10 +55,8 @@ export function Sidebar({
       {mobileOpen && <div className="fixed inset-0 z-30 bg-ink/20 md:hidden" onClick={onClose} />}
       <aside className={`${mobileOpen ? "flex" : "hidden"} fixed inset-y-0 left-0 z-40 w-[280px] shrink-0 flex-col bg-background px-3 py-3 md:static md:flex md:w-[260px]`}>
       <div className="flex h-10 items-center gap-2.5 px-2">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-ink text-primary-foreground">
-          <span className="font-display text-[13px] font-semibold">M</span>
-        </div>
-        <span className="font-display text-[15px] font-semibold">Multiform</span>
+        <img src={logoAsset.url} alt="TeraX CPT logo" className="size-7 rounded-lg" />
+        <span className="font-display text-[15px] font-semibold">TeraX CPT</span>
         <Button variant="ghost" size="icon" onClick={onClose} className="ml-auto md:hidden" aria-label="Close sidebar">
           <PanelLeftClose />
         </Button>

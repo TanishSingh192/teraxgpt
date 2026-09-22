@@ -9,13 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Multiform · Unified AI workspace" },
+      { title: "TeraX CPT · Unified AI workspace" },
       {
         name: "description",
         content:
           "One workspace for every AI model: streaming chat, file and image understanding, automatic model routing and usage tracking.",
       },
-      { property: "og:title", content: "Multiform · Unified AI workspace" },
+      { property: "og:title", content: "TeraX CPT · Unified AI workspace" },
       {
         property: "og:description",
         content:
