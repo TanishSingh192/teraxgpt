@@ -51,6 +51,23 @@ function textOf(message: AppMessage) {
     .join("\n");
 }
 
+type ResearchStep = { kind: "search" | "read"; label: string; pending: boolean };
+
+function researchSteps(message: AppMessage): ResearchStep[] {
+  const steps: ResearchStep[] = [];
+  for (const raw of message.parts) {
+    const part = raw as { type: string; state?: string; input?: Record<string, unknown> };
+    if (part.type !== "tool-web_search" && part.type !== "tool-open_source") continue;
+    const pending = part.state !== "output-available" && part.state !== "output-error";
+    if (part.type === "tool-web_search") {
+      steps.push({ kind: "search", label: String(part.input?.["query"] ?? "…"), pending });
+    } else {
+      steps.push({ kind: "read", label: String(part.input?.["url"] ?? "…"), pending });
+    }
+  }
+  return steps;
+}
+
 export function ChatView({
   conversationId,
   initialMessages,
@@ -386,6 +403,20 @@ export function ChatView({
                     <div className="mb-2 flex items-center gap-2 text-[12px] font-medium text-ink">
                       Multiform
                     </div>
+                    {researchSteps(message).length > 0 && (
+                      <div className="mb-3 space-y-1 rounded-xl bg-background px-3 py-2.5">
+                        <div className="text-[11px] font-medium text-subtle">Research trail</div>
+                        {researchSteps(message).map((step, index) => (
+                          <div key={index} className="flex items-center gap-2 text-[12px] text-ink">
+                            <Globe className="size-3.5 shrink-0 text-subtle" />
+                            <span className="truncate">
+                              {step.kind === "search" ? `Searched: ${step.label}` : `Read: ${step.label}`}
+                            </span>
+                            {step.pending && <span className="text-[11px] text-subtle">…</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <Markdown>{textOf(message)}</Markdown>
                     {message.metadata?.modelLabel && <div className="mt-3 text-[11px] text-subtle">{message.metadata.modelLabel} · {message.metadata.reason}</div>}
                   </div>
