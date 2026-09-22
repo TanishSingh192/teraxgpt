@@ -1,9 +1,8 @@
 # Roadmap
 
-- [x] Complete the familiar ChatGPT/Claude-style workspace redesign
-- [ ] Add Meta, NVIDIA, and DeepSeek models — blocked until the exposed credentials are rotated and exact model IDs are supplied securely
-- [x] Add Gemini models through the existing secure connection
-- [x] Verify the build and responsive interface
-- [ ] Web research mode: search, open sources, extract, cross-check, synthesize with citations (Firecrawl)
-- [ ] Projects page: instructions, files, conversations, memory, artifacts
-- [ ] Voice input and output with interruption (AI speech-to-text + text-to-speech)
+- [x] ChatGPT/Claude-style chat redesign (verified desktop + mobile)
+- [x] Gemini models in the selector
+- [x] Web research mode (real search + opening pages + citations, via Firecrawl)
+- [x] Projects workspace (instructions, files, memory, conversations, artifacts)
+- [x] Voice input and spoken replies with interruption
+- [ ] Meta, NVIDIA, DeepSeek models — blocked: needs rotated credentials and exact model IDs supplied securely
