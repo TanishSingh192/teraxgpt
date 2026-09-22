@@ -178,6 +178,8 @@ export function ChatView({
   const [speaking, setSpeaking] = useState(false);
   const [agentId, setAgentId] = useState<string>("");
   const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [skillId, setSkillId] = useState<string>("");
+  const [skills, setSkills] = useState<AgentOption[]>([]);
 
 
   const modelRef = useRef(modelId);
@@ -190,6 +192,8 @@ export function ChatView({
   voiceRef.current = voiceReplies;
   const agentRef = useRef(agentId);
   agentRef.current = agentId;
+  const skillRef = useRef(skillId);
+  skillRef.current = skillId;
   const conversationRef = useRef<string | null>(conversationId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
