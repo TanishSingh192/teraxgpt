@@ -494,6 +494,33 @@ export function ChatView({
                   >
                     <Paperclip />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void toggleRecording()}
+                    disabled={transcribing}
+                    aria-pressed={recording}
+                    aria-label={recording ? "Stop recording" : "Speak your message"}
+                    className={recording ? "text-signal" : "text-subtle"}
+                  >
+                    {transcribing ? (
+                      <Loader2 className="animate-spin" />
+                    ) : recording ? (
+                      <Square />
+                    ) : (
+                      <Mic />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setResearch(!research)}
+                    aria-pressed={research}
+                    className={`gap-1.5 rounded-lg px-2 text-[12px] ${research ? "bg-signal-soft text-ink" : "text-subtle"}`}
+                  >
+                    <Globe className="size-3.5" />
+                    Research
+                  </Button>
                 </div>
                 <textarea
                   rows={1}
