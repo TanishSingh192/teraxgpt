@@ -244,15 +244,7 @@ export function ChatView({
       new DefaultChatTransport<AppMessage>({
         api: "/api/chat",
         prepareSendMessagesRequest: async ({ messages }) => {
-          let { data } = await supabase.auth.getSession();
-          if (!data.session?.access_token) {
-            const refreshed = await supabase.auth.refreshSession();
-            data = refreshed.data.session ? { session: refreshed.data.session } : data;
-          }
-          const token = data.session?.access_token;
-          if (!token) {
-            throw new Error("Your session expired. Please sign in again to keep chatting.");
-          }
+          const token = await freshAccessToken();
           return {
             headers: { Authorization: `Bearer ${token}` },
             body: {
