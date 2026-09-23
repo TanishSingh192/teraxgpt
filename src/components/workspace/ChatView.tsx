@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import type { TurnInfo } from "@/components/workspace/ContextPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { AUTO, MODELS, estimateCost, getModel } from "@/lib/models";
+import { freshAccessToken } from "@/lib/session-token";
 import { speak, startRecording, transcribeAudio } from "@/lib/voice";
 
 export type ChatMetadata = {
