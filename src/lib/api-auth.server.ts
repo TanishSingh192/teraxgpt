@@ -13,6 +13,7 @@ export async function requireUser(
 
   const authHeader = request.headers.get("authorization") ?? "";
   if (!/^Bearer [^\s,]+$/.test(authHeader)) return unauthorized;
+  const accessToken = authHeader.slice("Bearer ".length);
 
   const supabaseUrl = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
   const anonKey =
@@ -25,7 +26,9 @@ export async function requireUser(
     global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data, error } = await supabase.auth.getUser();
+  // Server-created clients have no persisted session. Pass the caller's JWT
+  // explicitly; getUser() without it only checks the client's empty session.
+  const { data, error } = await supabase.auth.getUser(accessToken);
   if (error || !data.user) return unauthorized;
 
   return { userId: data.user.id };

@@ -185,10 +185,13 @@ export const Route = createFileRoute("/api/chat")({
 
         // Authenticate the caller with their app session.
         const authHeader = request.headers.get("authorization") ?? "";
+        const accessToken = authHeader.startsWith("Bearer ")
+          ? authHeader.slice("Bearer ".length)
+          : "";
         const supabaseUrl = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
         const anonKey =
           process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
-        if (!authHeader || !supabaseUrl || !anonKey) {
+        if (!accessToken || !supabaseUrl || !anonKey) {
           return new Response(JSON.stringify({ error: "Sign in to chat." }), {
             status: 401,
             headers: { "content-type": "application/json" },
@@ -198,7 +201,9 @@ export const Route = createFileRoute("/api/chat")({
           global: { headers: { Authorization: authHeader } },
           auth: { persistSession: false, autoRefreshToken: false },
         });
-        const { data: userData, error: userError } = await supabase.auth.getUser();
+        // This server client has no browser session. Validate the bearer JWT
+        // explicitly rather than asking the empty client session for a user.
+        const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
         if (userError || !userData.user) {
           return new Response(JSON.stringify({ error: "Sign in to chat." }), {
             status: 401,
