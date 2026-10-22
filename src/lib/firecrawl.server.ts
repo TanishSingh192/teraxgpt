@@ -50,7 +50,7 @@ function validatePublicWebUrl(input: string): string {
     throw new Error("That webpage URL is not allowed.");
   }
 
-  const host = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   const blocked =
     !host ||
     host === "localhost" ||
@@ -63,12 +63,12 @@ function validatePublicWebUrl(input: string): string {
     host === "0.0.0.0" ||
     host === "::" ||
     host === "::1" ||
-    /^127\\./.test(host) ||
-    /^10\\./.test(host) ||
-    /^192\\.168\\./.test(host) ||
-    /^169\\.254\\./.test(host) ||
-    /^172\\.(1[6-9]|2\\d|3[01])\\./.test(host) ||
-    /^\\d{1,3}(\\.\\d{1,3}){3}$/.test(host) ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    /^\d{1,3}(\.\d{1,3}){3}$/.test(host) ||
     host.includes(":");
 
   if (blocked) {
