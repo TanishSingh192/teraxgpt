@@ -1,24 +1,32 @@
 import { useState, type ReactNode } from "react";
+import { Code2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-function CodeBlock({ language, code }: { language: string; code: string }) {
+function CodeBlock({ language, code, onOpenInIDE }: { language: string; code: string; onOpenInIDE?: (code: string, language: string) => void }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="my-4 overflow-hidden rounded-xl bg-code-bg ring-1 ring-black/40">
       <div className="flex items-center justify-between px-4 py-2 text-[11px] text-white/50">
         <span className="font-mono">{language || "code"}</span>
-        <button
-          type="button"
-          className="font-mono transition-colors hover:text-white/80"
-          onClick={() => {
-            void navigator.clipboard.writeText(code);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1600);
-          }}
-        >
-          {copied ? "copied" : "copy"}
-        </button>
+        <div className="flex items-center gap-3">
+          {onOpenInIDE && (
+            <button type="button" className="flex items-center gap-1.5 font-mono transition-colors hover:text-white/80" onClick={() => onOpenInIDE(code, language || "html")} title="Edit and run this code in TeraXGPT">
+              <Code2 className="size-3.5" /> Open in IDE
+            </button>
+          )}
+          <button
+            type="button"
+            className="font-mono transition-colors hover:text-white/80"
+            onClick={() => {
+              void navigator.clipboard.writeText(code);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1600);
+            }}
+          >
+            {copied ? "copied" : "copy"}
+          </button>
+        </div>
       </div>
       <pre className="overflow-x-auto px-4 pb-4 font-mono text-[12.5px] leading-relaxed text-[#d7dce6]">
         {code}
@@ -27,7 +35,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   );
 }
 
-export function Markdown({ children }: { children: string }) {
+export function Markdown({ children, onOpenInIDE }: { children: string; onOpenInIDE?: (code: string, language: string) => void }) {
   return (
     <div className="text-[14px] leading-relaxed text-ink text-pretty">
       <ReactMarkdown
@@ -89,7 +97,7 @@ export function Markdown({ children }: { children: string }) {
                 </code>
               );
             }
-            return <CodeBlock language={match?.[1] ?? ""} code={raw} />;
+            return <CodeBlock language={match?.[1] ?? ""} code={raw} onOpenInIDE={onOpenInIDE} />;
           },
           pre: ({ children }) => <>{children}</>,
         }}

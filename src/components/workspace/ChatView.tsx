@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 
 import { Markdown } from "@/components/workspace/Markdown";
+import { CodeWorkspace } from "@/components/workspace/CodeWorkspace";
 import { Button } from "@/components/ui/button";
 import type { TurnInfo } from "@/components/workspace/ContextPanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -218,6 +219,7 @@ export function ChatView({
   const [modelId, setModelId] = useState<string>(AUTO);
   const [engine, setEngine] = useState<"standard" | "agno">("standard");
   const [input, setInput] = useState("");
+  const [codeWorkspace, setCodeWorkspace] = useState<{ code: string; language: string; messageId: string } | null>(null);
   const [documentStudioOpen, setDocumentStudioOpen] = useState(false);
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentType, setDocumentType] = useState("report");
@@ -842,7 +844,14 @@ export function ChatView({
                         </div>
                       </div>
                     ))}
-                    <Markdown>{textOf(message)}</Markdown>
+                    <Markdown onOpenInIDE={(code, language) => setCodeWorkspace({ code, language, messageId: message.id })}>{textOf(message)}</Markdown>
+                    {codeWorkspace?.messageId === message.id && message.role === "assistant" && (
+                      <CodeWorkspace
+                        initialCode={codeWorkspace.code}
+                        language={codeWorkspace.language}
+                        onClose={() => setCodeWorkspace(null)}
+                      />
+                    )}
                     {textOf(message).trim() && (
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         <Button variant="ghost" size="sm" onClick={() => {
