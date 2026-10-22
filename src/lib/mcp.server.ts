@@ -8,7 +8,7 @@ type JsonRpc = { jsonrpc: "2.0"; id: number; method: string; params?: unknown };
 
 async function encryptionKey(): Promise<Uint8Array> {
   const secret = process.env["CONNECTOR_ENCRYPTION_KEY"];
-  if (!secret) throw new Error("CONNECTOR_ENCRYPTION_KEY is not configured.");
+  if (!secret || secret.length < 32) throw new Error("CONNECTOR_ENCRYPTION_KEY must be set to a stable secret of at least 32 characters.");
   return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret)));
 }
 
