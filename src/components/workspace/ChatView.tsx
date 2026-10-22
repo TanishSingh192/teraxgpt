@@ -775,7 +775,6 @@ export function ChatView({
                     variant="ghost"
                     size="sm"
                     disabled={temporaryChat}
-                    disabled={temporaryChat}
                     onClick={() => setResearch(!research)}
                     aria-pressed={research}
                     className={`gap-1.5 rounded-lg px-2 text-[12px] ${research ? "bg-signal-soft text-ink" : "text-subtle"}`}

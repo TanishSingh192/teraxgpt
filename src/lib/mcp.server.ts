@@ -25,7 +25,7 @@ function decodeBase64Url(value: string): Uint8Array {
 }
 
 export async function encryptConnectorToken(token: string): Promise<string> {
-  const key = await crypto.subtle.importKey("raw", await encryptionKey(), "AES-GCM", false, ["encrypt"]);
+  const key = await crypto.subtle.importKey("raw", (await encryptionKey()) as BufferSource, "AES-GCM", false, ["encrypt"]);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(token));
   return `v1.${encodeBase64Url(iv)}.${encodeBase64Url(new Uint8Array(encrypted))}`;
