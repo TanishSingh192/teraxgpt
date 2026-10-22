@@ -47,6 +47,7 @@ TeraXGPT brings chat, model selection, web research, image generation, saved con
 - **Deep Research mode:** research-oriented prompting, web search, source reading, source cross-checking, and citation guidance.
 - **Image generation:** server-side image generation tool when configured and enabled.
 - **Image understanding:** requests containing an image are routed to a configured vision-capable model.
+- **Optional Agno AgentOS runtime:** route saved text chats to a self-hosted agent service with web search and persistent sessions. See [Agno AgentOS service setup](services/agno-agent/README.md).
 - **Usage tracking:** request/model usage metadata is recorded by the application.
 
 ### Privacy and extensibility
@@ -120,6 +121,7 @@ For a more detailed breakdown, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | Schema/migrations | Drizzle ORM and SQL migrations |
 | Research | Firecrawl-backed web search and page reading |
 | External tools | Remote HTTPS Model Context Protocol (MCP) connectors |
+| Agent runtime | Optional self-hosted Agno AgentOS service |
 | Validation | Zod |
 
 Provider availability and model IDs are determined by the current model registry and gateway configuration. Check the code and deployment configuration before assuming a specific provider/model is enabled.
