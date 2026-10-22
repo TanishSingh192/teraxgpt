@@ -177,8 +177,8 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
       };
       socket.onclose = () => {
         if (aliveRef.current && socketRef.current === socket) {
-          setConnected(false);
-          setConnecting(false);
+          // A remote close must release the microphone and audio graph too.
+          cleanup();
           setStatusText("Connection closed");
         }
       };
