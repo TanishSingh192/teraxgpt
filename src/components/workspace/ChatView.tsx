@@ -14,6 +14,9 @@ import {
   Menu,
   Mic,
   Paperclip,
+  Plus,
+  Sparkles,
+  Puzzle,
   RotateCcw,
   Square,
   Volume2,
@@ -226,6 +229,7 @@ export function ChatView({
   const [documentType, setDocumentType] = useState("report");
   const [selectedDocumentMessages, setSelectedDocumentMessages] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [turn, setTurn] = useState<TurnInfo | null>(null);
   const [research, setResearch] = useState(false);
   const [temporaryChat, setTemporaryChat] = useState(false);
@@ -978,14 +982,48 @@ export function ChatView({
                       event.target.value = "";
                     }}
                   />
-                  <Button
-                    variant="ghost" size="icon"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-subtle"
-                    aria-label="Attach a file"
-                  >
-                    <Paperclip />
-                  </Button>
+                  <div className="relative">
+                    <Button
+                      variant="ghost" size="icon"
+                      onClick={() => setAddMenuOpen((open) => !open)}
+                      className={`rounded-full text-subtle hover:bg-background ${addMenuOpen ? "bg-background text-ink" : ""}`}
+                      aria-label="Open add menu"
+                      aria-expanded={addMenuOpen}
+                      title="Add files, image generation, or plugins"
+                    >
+                      <Plus className="size-5" />
+                    </Button>
+                    {addMenuOpen && (
+                      <div className="absolute bottom-12 left-0 z-50 w-60 rounded-xl border border-line bg-panel p-1.5 shadow-xl">
+                        <button type="button" onClick={() => { setAddMenuOpen(false); fileInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background">
+                          <Paperclip className="size-4 text-subtle" />
+                          <span><span className="block font-medium text-ink">Upload files</span><span className="block text-[11px] text-subtle">Images, PDFs, and documents</span></span>
+                        </button>
+                        <button type="button" onClick={() => { setInput((current) => current.trim() ? current : "Generate an image of "); setAddMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background">
+                          <Sparkles className="size-4 text-subtle" />
+                          <span><span className="block font-medium text-ink">Image generation</span><span className="block text-[11px] text-subtle">Describe the image you want</span></span>
+                        </button>
+                        <div className="my-1 border-t border-line" />
+                        <div className="px-3 py-2">
+                          <div className="mb-2 flex items-center gap-2 text-[12px] font-medium text-ink"><Puzzle className="size-4 text-subtle" /> Plugins & tools</div>
+                          <button type="button" onClick={() => { setResearch((current) => !current); setAddMenuOpen(false); }} disabled={temporaryChat} className="flex w-full items-center justify-between rounded-lg px-1 py-2 text-left text-[12px] text-subtle hover:text-ink disabled:opacity-40">
+                            <span>Deep research</span><span>{research ? "On" : "Off"}</span>
+                          </button>
+                          {skills.length > 0 ? (
+                            <label className="mt-1 block text-[12px] text-subtle">
+                              Select a skill
+                              <select value={skillId} onChange={(event) => { setSkillId(event.target.value); setAddMenuOpen(false); }} aria-label="Plugin or skill" className="mt-1.5 w-full rounded-lg border border-line bg-background px-2.5 py-2 text-[12px] text-ink outline-none">
+                                <option value="">No skill selected</option>
+                                {skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
+                              </select>
+                            </label>
+                          ) : (
+                            <p className="text-[11px] leading-relaxed text-subtle">No additional skills are configured. Available tools can still be used automatically by TeraXGPT.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1004,35 +1042,7 @@ export function ChatView({
                       <Mic />
                     )}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={temporaryChat}
-                    onClick={() => setResearch(!research)}
-                    aria-pressed={research}
-                    className={`gap-1.5 rounded-lg px-2 text-[12px] ${research ? "bg-signal-soft text-ink" : "text-subtle"}`}
-                  >
-                    <Globe className="size-3.5" />
-                    Deep research
-                  </Button>
-                  {skills.length > 0 && (
-                    <label className="relative flex items-center">
-                      <select
-                        value={skillId}
-                        onChange={(event) => setSkillId(event.target.value)}
-                        aria-label="Skill"
-                        className={`appearance-none rounded-lg py-1.5 pl-2.5 pr-7 text-[12px] outline-none hover:bg-background ${skillId ? "bg-signal-soft text-ink" : "bg-transparent text-subtle"}`}
-                      >
-                        <option value="">No skill</option>
-                        {skills.map((skill) => (
-                          <option key={skill.id} value={skill.id}>
-                            {skill.name}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
-                    </label>
-                  )}
+
                 </div>
                 <textarea
                   rows={1}
@@ -1044,7 +1054,7 @@ export function ChatView({
                       void handleSend();
                     }
                   }}
-                  placeholder="Message TeraX CPT"
+                  placeholder="Message TeraXGPT"
                   className="max-h-40 min-h-9 flex-1 resize-none bg-transparent py-2 text-[14px] outline-none placeholder:text-subtle"
                 />
                 <Button

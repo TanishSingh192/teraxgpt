@@ -126,7 +126,7 @@ export function Sidebar({
                 size="icon"
                 aria-label={`Delete ${conversation.title}`}
                 onClick={() => onDelete(conversation.id)}
-                className="absolute right-1 size-7 text-subtle opacity-0 hover:text-destructive focus-visible:opacity-100 group-hover/row:opacity-100"
+                className="absolute right-1 size-7 text-subtle opacity-100 hover:text-destructive md:opacity-0 md:group-hover/row:opacity-100 focus-visible:opacity-100"
               >
                 <Trash2 className="size-3.5" />
               </Button>
