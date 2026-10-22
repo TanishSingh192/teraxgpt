@@ -5,6 +5,8 @@ import {
   ArrowUp,
   Bot,
   ChevronDown,
+  FileText,
+  Printer,
   Download,
   Globe,
   EyeOff,
@@ -80,6 +82,49 @@ const CAPABILITY_PROMPTS = [
   { label: "Analyze file", prompt: "Analyze the attached file and " },
   { label: "Data analysis", prompt: "Analyze this data and " },
 ];
+
+function escapeHtml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function markdownToDocumentHtml(markdown: string) {
+  const lines = markdown.replace(/\r/g, "").split("\n");
+  const output: string[] = [];
+  let list: "ul" | "ol" | null = null;
+  const closeList = () => { if (list) output.push(`</${list}>`); list = null; };
+  const inline = (value: string) => escapeHtml(value)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    const heading = /^(#{1,6})\s+(.+)$/.exec(line);
+    const bullet = /^\s*[-*+]\s+(.+)$/.exec(line);
+    const numbered = /^\s*\d+[.)]\s+(.+)$/.exec(line);
+    if (heading) {
+      closeList();
+      const level = heading[1]!.length;
+      output.push(`<h${level}>${inline(heading[2]!)}</h${level}>`);
+    } else if (bullet || numbered) {
+      const nextList = bullet ? "ul" : "ol";
+      if (list !== nextList) { closeList(); list = nextList; output.push(`<${list}>`); }
+      output.push(`<li>${inline((bullet ?? numbered)![1]!)}</li>`);
+    } else if (/^\s*([-*_])\1{2,}\s*$/.test(line)) {
+      closeList(); output.push("<hr>");
+    } else if (line.trim()) {
+      closeList(); output.push(`<p>${inline(line)}</p>`);
+    } else closeList();
+  }
+  closeList();
+  return output.join("\n");
+}
+
+function documentHtml(title: string, markdown: string) {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+<style>body{font-family:Arial,Helvetica,sans-serif;color:#202124;line-height:1.6;max-width:800px;margin:40px auto;padding:0 28px}h1,h2,h3,h4{line-height:1.25;margin-top:1.5em}h1{font-size:28px}h2{font-size:22px}h3{font-size:18px}p{margin:.65em 0}li{margin:.25em 0}code{font-family:Consolas,monospace;background:#f3f4f6;padding:2px 4px}a{color:#1458a6}hr{border:0;border-top:1px solid #ddd;margin:1.5em 0}@media print{body{margin:0 auto;padding:0;max-width:none}}</style>
+</head><body>${markdownToDocumentHtml(markdown)}</body></html>`;
+}
 
 function textOf(message: AppMessage) {
   return message.parts
@@ -758,6 +803,35 @@ export function ChatView({
                       </div>
                     ))}
                     <Markdown>{textOf(message)}</Markdown>
+                    {textOf(message).trim() && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          const title = initialTitle.trim() || "TeraXGPT document";
+                          const blob = new Blob(["\ufeff", documentHtml(title, textOf(message))], { type: "application/msword;charset=utf-8" });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement("a");
+                          link.href = url;
+                          link.download = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 80) || "teraxgpt-document"}.doc`;
+                          document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+                          toast.success("Document downloaded. Open it in Word or a compatible editor.");
+                        }} aria-label="Download this response as a Word document">
+                          <FileText /> Word document
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          const title = initialTitle.trim() || "TeraXGPT document";
+                          const printWindow = window.open("", "_blank");
+                          if (!printWindow) { toast.error("Allow pop-ups to create a PDF, then try again."); return; }
+                          printWindow.document.open();
+                          printWindow.document.write(documentHtml(title, textOf(message)));
+                          printWindow.document.close();
+                          printWindow.document.title = title;
+                          printWindow.focus();
+                          printWindow.setTimeout(() => printWindow.print(), 250);
+                        }} aria-label="Print or save this response as PDF">
+                          <Printer /> Save as PDF
+                        </Button>
+                      </div>
+                    )}
                     {message.metadata?.modelLabel && (
                       <div className="mt-3 text-[11px] text-subtle">
                         {message.metadata.agentName ? `${message.metadata.agentName} · ` : ""}
