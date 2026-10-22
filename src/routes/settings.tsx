@@ -128,7 +128,7 @@ function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (user) void refresh();
+    if (user) { void refresh(); void loadConnectors(); }
   }, [user, refresh]);
 
   async function saveSettings(next: Settings) {
