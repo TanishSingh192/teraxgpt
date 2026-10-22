@@ -348,8 +348,8 @@ export function ChatView({
       await supabase.from("usage_records").insert({
         user_id: userId,
         conversation_id: convId,
-        provider: model.provider,
-        model: model.id,
+        provider: isAgno ? "agno" : model.provider,
+        model: isAgno ? "agno-agent" : model.id,
         input_tokens: meta.inputTokens ?? 0,
         output_tokens: meta.outputTokens ?? 0,
         estimated_cost: cost,
