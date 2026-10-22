@@ -189,6 +189,35 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
         },
       }));
 
+      await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const timeout = window.setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          socket.removeEventListener("message", waitForSetup);
+          reject(new Error("Gemini Live did not finish setting up. Try reconnecting."));
+        }, 15000);
+        const waitForSetup = (event: MessageEvent) => {
+          if (typeof event.data !== "string") return;
+          let payload: Record<string, unknown>;
+          try { payload = JSON.parse(event.data) as Record<string, unknown>; } catch { return; }
+          if (payload.setupComplete === true) {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeout);
+            socket.removeEventListener("message", waitForSetup);
+            resolve();
+          } else if (payload.error) {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeout);
+            socket.removeEventListener("message", waitForSetup);
+            reject(new Error("Gemini Live rejected the session setup."));
+          }
+        };
+        socket.addEventListener("message", waitForSetup);
+      });
+
       const source = inputContext.createMediaStreamSource(stream);
       const processor = inputContext.createScriptProcessor(4096, 1, 1);
       sourceRef.current = source;
