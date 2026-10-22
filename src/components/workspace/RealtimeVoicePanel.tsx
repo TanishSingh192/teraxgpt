@@ -26,6 +26,7 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
   const [muted, setMuted] = useState(false);
+  const mutedRef = useRef(false);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
   const [statusText, setStatusText] = useState("Ready when you are");
@@ -42,6 +43,7 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
 
   function cleanup() {
     setupCompleteRef.current = false;
+    mutedRef.current = false;
     for (const source of audioSourcesRef.current) { try { source.stop(); } catch { /* already stopped */ } }
     audioSourcesRef.current.clear();
     const socket = socketRef.current;
@@ -230,7 +232,7 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
       sourceRef.current = source;
       processorRef.current = processor;
       processor.onaudioprocess = (event) => {
-        if (socket.readyState !== WebSocket.OPEN || !setupCompleteRef.current || muted) return;
+        if (socket.readyState !== WebSocket.OPEN || !setupCompleteRef.current || mutedRef.current) return;
         const input = event.inputBuffer.getChannelData(0);
         const pcm = new Int16Array(input.length);
         for (let i = 0; i < input.length; i++) {
@@ -260,7 +262,8 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
   }
 
   function toggleMute() {
-    const next = !muted;
+    const next = !mutedRef.current;
+    mutedRef.current = next;
     setMuted(next);
     setStatusText(next ? "Microphone muted" : "Listening");
   }
