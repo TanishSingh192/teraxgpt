@@ -22,13 +22,17 @@ Never claim to have used a tool, browsed the web, or read a file that was not pr
 You can look at images the user attaches, and you can create images with the generate_image tool when it is available.
 After generating an image, describe it in one short line instead of trying to paste the image into your text.`;
 
-const RESEARCH_PROMPT = `Web research mode is ON. You have two tools:
-- web_search: find candidate sources for a query.
-- open_source: read the full text of one URL.
-Work like a researcher: search, open at least two promising sources, extract the specific facts you need,
-cross-check any claim that matters against a second independent source, and note disagreements explicitly.
-Cite every non-obvious claim inline as a markdown link to the exact page you read, and finish with a
-"Sources" list of the pages you actually opened. Never cite a page you did not open, and never invent a URL.`;
+const RESEARCH_PROMPT = `Deep Research mode is ON. You have two tools:
+- web_search: discover candidate sources for a focused query.
+- open_source: read the actual contents of a URL before citing it.
+Follow a research workflow:
+1. Decompose the question into sub-questions and identify what evidence would answer each one.
+2. Search with multiple targeted queries, favoring primary sources, official documentation, original research, and reputable reporting.
+3. Open at least three useful sources when the topic supports it. Do not cite search snippets as if you read the underlying page.
+4. Cross-check important facts against an independent source; distinguish evidence, interpretation, and unresolved disagreement.
+5. Synthesize findings rather than writing a sequence of source summaries. Explain implications, trade-offs, confidence, and limitations.
+6. Cite each material factual claim inline using markdown links to the exact pages you opened. End with a Sources section containing only sources actually opened.
+Never invent facts, quotations, statistics, citations, or URLs. If the evidence is thin or sources conflict, say so explicitly. If the task is current or time-sensitive, prioritize recent evidence and state the relevant date.`;
 
 const AGENT_PROMPT = `You are running as a configured agent.
 Before acting on anything that needs more than one step, call update_plan with the numbered steps you intend to take.
@@ -55,7 +59,7 @@ type SettingsRow = {
 };
 
 /** Personalization + durable memory the user controls in Settings. */
-async function personalContext(supabase: SupabaseClient) {
+async function personalContext(supabase: SupabaseClient, includeMemory = true) {
   const [settings, memory] = await Promise.all([
     supabase
       .from("user_settings")
@@ -76,7 +80,7 @@ async function personalContext(supabase: SupabaseClient) {
   if (row?.occupation) lines.push(`What they do: ${row.occupation}.`);
   if (row?.traits) lines.push(`How they want you to respond: ${row.traits}.`);
   if (row?.custom_instructions) lines.push(`Their standing instructions:\n${row.custom_instructions}`);
-  if ((row?.memory_enabled ?? true) && memories.length) {
+  if (includeMemory && (row?.memory_enabled ?? true) && memories.length) {
     lines.push(
       `Things you remember about them (use when relevant, never recite the whole list):\n${memories
         .map((m) => `- ${m.content}`)
@@ -157,6 +161,7 @@ const ChatRequestSchema = z.object({
   messages: z.array(z.unknown()).max(MAX_TURNS),
   modelId: z.string().trim().min(1).max(100).optional(),
   research: z.boolean().optional(),
+  temporaryChat: z.boolean().optional(),
   projectId: z.string().uuid().nullable().optional(),
   agentId: z.string().uuid().nullable().optional(),
   skillId: z.string().uuid().nullable().optional(),
@@ -274,10 +279,11 @@ export const Route = createFileRoute("/api/chat")({
         }
         const requested = body.modelId ?? AUTO;
         const research = body.research === true;
+        const temporaryChat = body.temporaryChat === true;
 
         // Load the agent (RLS keeps this to the caller's own agents).
         let agent: AgentRow | null = null;
-        if (body.agentId) {
+        if (body.agentId && !temporaryChat) {
           const { data } = await supabase
             .from("agents")
             .select("id,name,instructions,model_id,tools,require_approval,project_id")
@@ -286,7 +292,7 @@ export const Route = createFileRoute("/api/chat")({
           agent = (data as AgentRow | null) ?? null;
         }
 
-        const projectId = body.projectId ?? agent?.project_id ?? null;
+        const projectId = temporaryChat ? null : body.projectId ?? agent?.project_id ?? null;
 
         const signals = describe(messages);
         const agentModel = agent && agent.model_id !== AUTO ? agent.model_id : null;
@@ -311,16 +317,33 @@ export const Route = createFileRoute("/api/chat")({
         const imageEntry = decision.model;
         const model: ModelEntry = imageMode ? getModel(IMAGE_DRIVER_ID) : decision.model;
 
+        const { data: pluginRows } = await supabase
+          .from("user_plugin_settings")
+          .select("plugin_id,enabled")
+          .eq("user_id", userId);
+        const pluginEnabled = (pluginId: string) =>
+          (pluginRows ?? []).find((row) => row.plugin_id === pluginId)?.enabled ?? true;
+        if (research && !pluginEnabled("web_research")) {
+          return Response.json({ error: "Enable Web research in Settings → Plugins to use Deep Research." }, { status: 409 });
+        }
+
         // Permissions: an agent may only use the tools it was granted.
         const granted = new Set<ToolId>(
           agent
             ? ((Array.isArray(agent.tools) ? agent.tools : DEFAULT_AGENT_TOOLS) as ToolId[])
             : ([
-                ...(research ? (["web_search", "open_source"] as ToolId[]) : []),
-                "generate_image",
-                "save_memory",
+                ...(research && pluginEnabled("web_research") ? (["web_search", "open_source"] as ToolId[]) : []),
+                ...(pluginEnabled("image_generation") ? (["generate_image"] as ToolId[]) : []),
+                ...(!temporaryChat && pluginEnabled("memory") ? (["save_memory"] as ToolId[]) : []),
               ] as ToolId[]),
         );
+        if (!pluginEnabled("web_research")) {
+          granted.delete("web_search");
+          granted.delete("open_source");
+        }
+        if (!pluginEnabled("image_generation")) granted.delete("generate_image");
+        if (!pluginEnabled("memory") || temporaryChat) granted.delete("save_memory");
+
         const approvalNeeded = (id: ToolId) => Boolean(agent?.require_approval) && isWriteTool(id);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -400,7 +423,7 @@ export const Route = createFileRoute("/api/chat")({
           });
         }
 
-        if (!agent) {
+        if (!agent && pluginEnabled("mcp_connectors")) {
           // Discover a small set of enabled connectors concurrently to avoid serial latency.
           const { data: mcpConnectors } = await supabase
             .from("user_mcp_connectors")
@@ -476,8 +499,8 @@ export const Route = createFileRoute("/api/chat")({
         const modelMessages = await convertToModelMessages(messages);
 
         let system = SYSTEM_PROMPT;
-        system += await personalContext(supabase);
-        if (body.skillId) system += await skillContext(supabase, body.skillId);
+        if (!temporaryChat) system += await personalContext(supabase, pluginEnabled("memory"));
+        if (!temporaryChat && body.skillId) system += await skillContext(supabase, body.skillId);
         if (projectId) system += await projectContext(supabase, projectId);
         if (research) system += `\n\n${RESEARCH_PROMPT}`;
         if (agent) {
