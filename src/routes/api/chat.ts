@@ -575,7 +575,7 @@ export const Route = createFileRoute("/api/chat")({
           messageMetadata: ({ part }) => {
             if (part.type === "start") {
               return {
-                modelId: model.id,
+                modelId: engine === "hermes" ? "hermes-agent" : model.id,
                 modelLabel: engine === "hermes" ? "Hermes Agent" : imageMode ? `${imageEntry.label} + ${model.label}` : model.label,
                 provider: engine === "hermes" ? "hermes" : model.provider,
                 task: engine === "hermes" ? "Agent execution" : decision.task,
