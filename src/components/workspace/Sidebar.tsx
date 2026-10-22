@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import logoAsset from "@/assets/terax-logo.png.asset.json";
 import { Button } from "@/components/ui/button";
@@ -60,9 +61,19 @@ export function Sidebar({
   async function saveRename(id: string) {
     const title = editTitle.trim();
     if (!title) return;
-    await onRename(id, title);
-    setEditingId(null);
-    setEditTitle("");
+    const currentTitle = conversations.find((conversation) => conversation.id === id)?.title;
+    if (title === currentTitle) {
+      setEditingId(null);
+      setEditTitle("");
+      return;
+    }
+    try {
+      await onRename(id, title);
+      setEditingId(null);
+      setEditTitle("");
+    } catch {
+      toast.error("Rename failed. Your original title was kept.");
+    }
   }
 
   const today = new Date();
