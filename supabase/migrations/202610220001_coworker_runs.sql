@@ -37,7 +37,12 @@ alter table public.coworker_events enable row level security;
 drop policy if exists "Users read their coworker runs" on public.coworker_runs;
 create policy "Users read their coworker runs" on public.coworker_runs for select to authenticated using (auth.uid() = user_id);
 drop policy if exists "Users enqueue their coworker runs" on public.coworker_runs;
-create policy "Users enqueue their coworker runs" on public.coworker_runs for insert to authenticated with check (auth.uid() = user_id and status = 'queued' and output is null and error_code is null and attempt_count = 0);
+create policy "Users enqueue their coworker runs" on public.coworker_runs for insert to authenticated with check (
+  auth.uid() = user_id and status = 'queued' and output is null and error_code is null and attempt_count = 0
+  and (conversation_id is null or exists (
+    select 1 from public.conversations c where c.id = conversation_id and c.user_id = auth.uid()
+  ))
+);
 drop policy if exists "Users read their coworker events" on public.coworker_events;
 create policy "Users read their coworker events" on public.coworker_events for select to authenticated using (auth.uid() = user_id);
 
