@@ -151,6 +151,16 @@ function describe(messages: UIMessage[]) {
 }
 
 const MAX_TURNS = 200;
+const MAX_REQUEST_BYTES = 1_000_000;
+const ChatRequestSchema = z.object({
+  messages: z.array(z.unknown()).max(MAX_TURNS),
+  modelId: z.string().trim().min(1).max(100).optional(),
+  research: z.boolean().optional(),
+  projectId: z.string().uuid().nullable().optional(),
+  agentId: z.string().uuid().nullable().optional(),
+  skillId: z.string().uuid().nullable().optional(),
+  conversationId: z.string().uuid().nullable().optional(),
+});
 
 /**
  * Keeps only conversation turns the caller is allowed to supply.
@@ -212,17 +222,19 @@ export const Route = createFileRoute("/api/chat")({
         }
         const userId = userData.user.id;
 
-        const body = (await request.json()) as {
-          messages: UIMessage[];
-          modelId?: string;
-          research?: boolean;
-          projectId?: string | null;
-          agentId?: string | null;
-          skillId?: string | null;
-          conversationId?: string | null;
-        };
+        const declaredLength = Number(request.headers.get("content-length") ?? 0);
+        if (declaredLength > MAX_REQUEST_BYTES) return Response.json({ error: "Chat request is too large." }, { status: 413 });
+        let rawBody: string;
+        try { rawBody = await request.text(); } catch { return Response.json({ error: "Could not read the chat request." }, { status: 400 }); }
+        if (new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BYTES) return Response.json({ error: "Chat request is too large." }, { status: 413 });
+        let parsedBody: unknown;
+        try { parsedBody = JSON.parse(rawBody); } catch { return Response.json({ error: "Invalid JSON request body." }, { status: 400 }); }
+        const parsedRequest = ChatRequestSchema.safeParse(parsedBody);
+        if (!parsedRequest.success) return Response.json({ error: "Invalid chat request." }, { status: 400 });
+        const body = parsedRequest.data;
         // The server owns the instructions: callers may only send user/assistant turns.
         const messages = sanitizeMessages(body.messages);
+        if (messages.length === 0) return Response.json({ error: "Send at least one valid chat message." }, { status: 400 });
         const requested = body.modelId ?? AUTO;
         const research = body.research === true;
 
