@@ -175,6 +175,8 @@ export function ChatView({
   const [turn, setTurn] = useState<TurnInfo | null>(null);
   const [research, setResearch] = useState(false);
   const [temporaryChat, setTemporaryChat] = useState(false);
+  const temporaryChatRef = useRef(false);
+  temporaryChatRef.current = temporaryChat;
   const [voiceReplies, setVoiceReplies] = useState(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
@@ -254,7 +256,7 @@ export function ChatView({
               messages,
               modelId: modelRef.current,
               research: researchRef.current,
-              temporaryChat,
+              temporaryChat: temporaryChatRef.current,
               projectId: projectRef.current,
               agentId: agentRef.current || null,
               skillId: skillRef.current || null,
@@ -498,8 +500,8 @@ export function ChatView({
           <div className="ml-auto flex items-center gap-2">
             <Button variant={temporaryChat ? "secondary" : "ghost"} size="sm" aria-pressed={temporaryChat}
               onClick={() => {
-                if (!temporaryChat && messages.length > 0) {
-                  toast.error("Start a new chat before switching to Temporary Chat.");
+                if (messages.length > 0) {
+                  toast.error("Start a new chat before changing Temporary Chat mode.");
                   return;
                 }
                 setTemporaryChat((current) => !current);
