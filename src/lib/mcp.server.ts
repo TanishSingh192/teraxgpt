@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 export type McpTool = {
   name: string;
   description?: string;
@@ -8,25 +6,37 @@ export type McpTool = {
 
 type JsonRpc = { jsonrpc: "2.0"; id: number; method: string; params?: unknown };
 
-function encryptionKey() {
+async function encryptionKey(): Promise<Uint8Array> {
   const secret = process.env["CONNECTOR_ENCRYPTION_KEY"];
   if (!secret) throw new Error("CONNECTOR_ENCRYPTION_KEY is not configured.");
-  return createHash("sha256").update(secret).digest();
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret)));
+}
+
+function encodeBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+}
+
+function decodeBase64Url(value: string): Uint8Array {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(base64 + "=".repeat((4 - (base64.length % 4)) % 4));
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
 export async function encryptConnectorToken(token: string): Promise<string> {
-  const keyBytes = encryptionKey();
+  const keyBytes = await encryptionKey();
   const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["encrypt"]);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(token));
-  return `v1.${Buffer.from(iv).toString("base64url")}.${Buffer.from(encrypted).toString("base64url")}`;
+  return `v1.${encodeBase64Url(iv)}.${encodeBase64Url(new Uint8Array(encrypted))}`;
 }
 
 export async function decryptConnectorToken(value: string | null): Promise<string | undefined> {
   if (!value) return undefined;
   const [version, ivPart, dataPart] = value.split(".");
   if (version !== "v1" || !ivPart || !dataPart) throw new Error("Stored connector credential is invalid.");
-  const key = await crypto.subtle.importKey("raw", encryptionKey(), "AES-GCM", false, ["decrypt"]);
+  const key = await crypto.subtle.importKey("raw", await encryptionKey(), "AES-GCM", false, ["decrypt"]);
   const plain = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: Buffer.from(ivPart, "base64url") },
     key,
