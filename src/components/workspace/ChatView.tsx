@@ -831,10 +831,19 @@ export function ChatView({
               </section>
             )}
 
+            <style>{`
+              .terax-response { animation: terax-response-in .32s cubic-bezier(.2,.75,.25,1) both; }
+              .terax-thinking-dots i { display:block; width:5px; height:5px; border-radius:999px; background:currentColor; opacity:.35; animation:terax-dot-pulse 1.1s ease-in-out infinite; }
+              .terax-thinking-dots i:nth-child(2) { animation-delay:.15s; }
+              .terax-thinking-dots i:nth-child(3) { animation-delay:.3s; }
+              @keyframes terax-response-in { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+              @keyframes terax-dot-pulse { 0%,60%,100% { opacity:.25; transform:translateY(0); } 30% { opacity:.95; transform:translateY(-3px); } }
+              @media (prefers-reduced-motion: reduce) { .terax-response { animation:none; } .terax-thinking-dots i { animation:none; opacity:.65; } }
+            `}</style>
             {messages.map((message) =>
               message.role === "user" ? (
-                <div key={message.id} className="mt-9 flex justify-end first:mt-0">
-                  <div className="max-w-[78%] rounded-2xl bg-background px-4 py-3 text-[14px] leading-relaxed text-ink">
+                <div key={message.id} className="mt-8 flex justify-end first:mt-0 sm:mt-10">
+                  <div className="max-w-[92%] rounded-[22px] border border-line/70 bg-background/90 px-4 py-3.5 text-[14px] leading-relaxed text-ink shadow-[0_8px_28px_rgba(0,0,0,0.035)] sm:max-w-[82%] sm:px-5">
                       {message.parts
                         .filter((p) => p.type === "file")
                         .map((part, index) => (
@@ -854,13 +863,14 @@ export function ChatView({
                     </div>
                 </div>
               ) : (
-                <div key={message.id} className="mt-9 flex gap-4 first:mt-0">
-                  <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-ink text-primary-foreground">
-                    <Bot className="size-4" />
+                <article key={message.id} className="terax-response mt-8 flex gap-3.5 first:mt-0 sm:mt-10 sm:gap-4">
+                  <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-xl border border-indigo-400/20 bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-cyan-400/10 text-indigo-500 shadow-[0_0_24px_rgba(99,102,241,0.08)]">
+                    <BrainCircuit className="size-4" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex items-center gap-2 text-[12px] font-medium text-ink">
-                      TeraX CPT
+                  <div className="min-w-0 flex-1 rounded-2xl border border-line/50 bg-panel/35 px-3.5 py-4 sm:px-5 sm:py-5">
+                    <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px] font-semibold tracking-wide text-ink">
+                      <span>TeraXGPT</span>
+                      <span className="rounded-full border border-line/70 bg-background/70 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-subtle">Intelligence output</span>
                     </div>
                     {researchSteps(message).length > 0 && (
                       <div className="mb-3 space-y-1 rounded-xl bg-background px-3 py-2.5">
@@ -942,7 +952,14 @@ export function ChatView({
                         </div>
                       </div>
                     ))}
-                    <Markdown onOpenInIDE={(code, language) => setCodeWorkspace({ code, language, messageId: message.id })}>{textOf(message)}</Markdown>
+                    {textOf(message).trim() ? (
+                      <Markdown onOpenInIDE={(code, language) => setCodeWorkspace({ code, language, messageId: message.id })}>{textOf(message)}</Markdown>
+                    ) : busy && message.id === messages[messages.length - 1]?.id ? (
+                      <div className="flex items-center gap-2 py-2 text-sm text-subtle" role="status" aria-live="polite">
+                        <span className="terax-thinking-dots flex items-center gap-1" aria-hidden="true"><i /><i /><i /></span>
+                        <span>Thinking through your request</span>
+                      </div>
+                    ) : null}
                     {codeWorkspace?.messageId === message.id && message.role === "assistant" && (
                       <CodeWorkspace
                         initialCode={codeWorkspace.code}
@@ -951,7 +968,7 @@ export function ChatView({
                       />
                     )}
                     {textOf(message).trim() && (
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-line/50 pt-3">
                         <Button variant="ghost" size="sm" onClick={() => {
                           const title = initialTitle.trim() || "TeraXGPT document";
                           const blob = new Blob(["\ufeff", documentHtml(title, textOf(message))], { type: "application/msword;charset=utf-8" });
@@ -1017,7 +1034,7 @@ export function ChatView({
 
         <div id="terax-composer" className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-panel via-panel to-transparent px-4 pb-3 pt-8 md:px-8">
           <div className="pointer-events-auto mx-auto max-w-[760px]">
-            <div className="composer-shell rounded-2xl border border-line bg-panel p-2">
+            <div className="composer-shell rounded-[24px] border border-line bg-panel/95 p-2.5 shadow-[0_16px_60px_rgba(0,0,0,0.08)] transition-[border-color,box-shadow] duration-200 focus-within:border-indigo-400/50 focus-within:shadow-[0_16px_60px_rgba(99,102,241,0.12)]">
               {files.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-1.5 px-1">
                   {files.map((file, index) => (
@@ -1124,8 +1141,9 @@ export function ChatView({
                       void handleSend();
                     }
                   }}
-                  placeholder="Message TeraXGPT"
-                  className="max-h-40 min-h-9 flex-1 resize-none bg-transparent py-2 text-[14px] outline-none placeholder:text-subtle"
+                  placeholder="Ask, build, investigate, create…"
+                  aria-label="Message TeraXGPT"
+                  className="max-h-40 min-h-10 flex-1 resize-none bg-transparent px-1 py-2.5 text-[14px] leading-relaxed outline-none placeholder:text-subtle"
                 />
                 <Button
                   onClick={() => void handleSend()}
