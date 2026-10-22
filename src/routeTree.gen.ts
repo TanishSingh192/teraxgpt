@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiConnectorsRouteImport } from './routes/api/connectors'
+import { Route as ApiPluginsRouteImport } from './routes/api/plugins'
 import { Route as ApiSpeakRouteImport } from './routes/api/speak'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
@@ -51,6 +52,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPluginsRoute = ApiPluginsRouteImport.update({
+  id: '/api/plugins',
+  path: '/api/plugins',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSpeakRoute = ApiSpeakRouteImport.update({
   id: '/api/speak',
   path: '/api/speak',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/connectors': typeof ApiConnectorsRoute
+  '/api/plugins': typeof ApiPluginsRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/connectors': typeof ApiConnectorsRoute
+  '/api/plugins': typeof ApiPluginsRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/connectors': typeof ApiConnectorsRoute
+  '/api/plugins': typeof ApiPluginsRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -163,6 +172,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiConnectorsRoute: typeof ApiConnectorsRoute
+  ApiPluginsRoute: typeof ApiPluginsRoute
   ApiSpeakRoute: typeof ApiSpeakRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
@@ -198,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/plugins': {
+      id: '/api/plugins'
+      path: '/api/plugins'
+      fullPath: '/api/plugins'
+      preLoaderRoute: typeof ApiPluginsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/connectors': {
@@ -259,6 +276,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   ApiChatRoute: ApiChatRoute,
   ApiConnectorsRoute: ApiConnectorsRoute,
+  ApiPluginsRoute: ApiPluginsRoute,
   ApiSpeakRoute: ApiSpeakRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
