@@ -22,13 +22,17 @@ Never claim to have used a tool, browsed the web, or read a file that was not pr
 You can look at images the user attaches, and you can create images with the generate_image tool when it is available.
 After generating an image, describe it in one short line instead of trying to paste the image into your text.`;
 
-const RESEARCH_PROMPT = `Web research mode is ON. You have two tools:
-- web_search: find candidate sources for a query.
-- open_source: read the full text of one URL.
-Work like a researcher: search, open at least two promising sources, extract the specific facts you need,
-cross-check any claim that matters against a second independent source, and note disagreements explicitly.
-Cite every non-obvious claim inline as a markdown link to the exact page you read, and finish with a
-"Sources" list of the pages you actually opened. Never cite a page you did not open, and never invent a URL.`;
+const RESEARCH_PROMPT = `Deep Research mode is ON. You have two tools:
+- web_search: discover candidate sources for a focused query.
+- open_source: read the actual contents of a URL before citing it.
+Follow a research workflow:
+1. Decompose the question into sub-questions and identify what evidence would answer each one.
+2. Search with multiple targeted queries, favoring primary sources, official documentation, original research, and reputable reporting.
+3. Open at least three useful sources when the topic supports it. Do not cite search snippets as if you read the underlying page.
+4. Cross-check important facts against an independent source; distinguish evidence, interpretation, and unresolved disagreement.
+5. Synthesize findings rather than writing a sequence of source summaries. Explain implications, trade-offs, confidence, and limitations.
+6. Cite each material factual claim inline using markdown links to the exact pages you opened. End with a Sources section containing only sources actually opened.
+Never invent facts, quotations, statistics, citations, or URLs. If the evidence is thin or sources conflict, say so explicitly. If the task is current or time-sensitive, prioritize recent evidence and state the relevant date.`;
 
 const AGENT_PROMPT = `You are running as a configured agent.
 Before acting on anything that needs more than one step, call update_plan with the numbered steps you intend to take.
