@@ -502,7 +502,7 @@ export function ChatView({
           <div className="ml-auto flex items-center gap-2">
             <Button variant={temporaryChat ? "secondary" : "ghost"} size="sm" aria-pressed={temporaryChat}
               onClick={() => {
-                if (messages.length > 0) {
+                if (messages.length > 0 || conversationRef.current !== null) {
                   toast.error("Start a new chat before changing Temporary Chat mode.");
                   return;
                 }
