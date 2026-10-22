@@ -157,6 +157,7 @@ const ChatRequestSchema = z.object({
   messages: z.array(z.unknown()).max(MAX_TURNS),
   modelId: z.string().trim().min(1).max(100).optional(),
   research: z.boolean().optional(),
+  temporaryChat: z.boolean().optional(),
   projectId: z.string().uuid().nullable().optional(),
   agentId: z.string().uuid().nullable().optional(),
   skillId: z.string().uuid().nullable().optional(),
@@ -274,10 +275,11 @@ export const Route = createFileRoute("/api/chat")({
         }
         const requested = body.modelId ?? AUTO;
         const research = body.research === true;
+        const temporaryChat = body.temporaryChat === true;
 
         // Load the agent (RLS keeps this to the caller's own agents).
         let agent: AgentRow | null = null;
-        if (body.agentId) {
+        if (body.agentId && !temporaryChat) {
           const { data } = await supabase
             .from("agents")
             .select("id,name,instructions,model_id,tools,require_approval,project_id")
@@ -286,7 +288,7 @@ export const Route = createFileRoute("/api/chat")({
           agent = (data as AgentRow | null) ?? null;
         }
 
-        const projectId = body.projectId ?? agent?.project_id ?? null;
+        const projectId = temporaryChat ? null : body.projectId ?? agent?.project_id ?? null;
 
         const signals = describe(messages);
         const agentModel = agent && agent.model_id !== AUTO ? agent.model_id : null;
@@ -318,7 +320,7 @@ export const Route = createFileRoute("/api/chat")({
             : ([
                 ...(research ? (["web_search", "open_source"] as ToolId[]) : []),
                 "generate_image",
-                "save_memory",
+                ...(!temporaryChat ? (["save_memory"] as ToolId[]) : []),
               ] as ToolId[]),
         );
         const approvalNeeded = (id: ToolId) => Boolean(agent?.require_approval) && isWriteTool(id);
@@ -476,8 +478,8 @@ export const Route = createFileRoute("/api/chat")({
         const modelMessages = await convertToModelMessages(messages);
 
         let system = SYSTEM_PROMPT;
-        system += await personalContext(supabase);
-        if (body.skillId) system += await skillContext(supabase, body.skillId);
+        if (!temporaryChat) system += await personalContext(supabase);
+        if (!temporaryChat && body.skillId) system += await skillContext(supabase, body.skillId);
         if (projectId) system += await projectContext(supabase, projectId);
         if (research) system += `\n\n${RESEARCH_PROMPT}`;
         if (agent) {
