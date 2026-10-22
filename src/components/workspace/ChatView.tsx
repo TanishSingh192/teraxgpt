@@ -84,8 +84,7 @@ function textOf(message: AppMessage) {
   return message.parts
     .filter((p): p is { type: "text"; text: string } => p.type === "text")
     .map((p) => p.text)
-    .join("
-");
+    .join("\n");
 }
 
 type ResearchStep = { kind: "search" | "read"; label: string; pending: boolean };
