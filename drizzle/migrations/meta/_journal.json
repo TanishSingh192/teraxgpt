@@ -29,6 +29,13 @@
       "when": 1790071620837,
       "tag": "0003_create_settings_memory_skills_schedules",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792640507144,
+      "tag": "0004_create_connectors_and_plugin_settings",
+      "breakpoints": true
     }
   ]
 }

@@ -492,6 +492,42 @@ export type Database = {
           },
         ]
       }
+      user_mcp_connectors: {
+        Row: {
+          auth_token_encrypted: string | null
+          created_at: string
+          enabled: boolean
+          endpoint: string
+          id: string
+          last_connected_at: string | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auth_token_encrypted?: string | null
+          created_at?: string
+          enabled?: boolean
+          endpoint: string
+          id?: string
+          last_connected_at?: string | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auth_token_encrypted?: string | null
+          created_at?: string
+          enabled?: boolean
+          endpoint?: string
+          id?: string
+          last_connected_at?: string | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_memory: {
         Row: {
           content: string
@@ -512,6 +548,30 @@ export type Database = {
           created_at?: string
           id?: string
           source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_plugin_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          plugin_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          plugin_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          plugin_id?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
