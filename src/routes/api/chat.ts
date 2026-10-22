@@ -532,7 +532,7 @@ export const Route = createFileRoute("/api/chat")({
             .join("\n")
             .trim();
           const containsAttachment = messages.some((message) =>
-            message.parts.some((part) => part.type === "file" || part.type === "image"),
+            message.parts.some((part) => part.type === "file"),
           );
           if (containsAttachment) {
             return Response.json(
