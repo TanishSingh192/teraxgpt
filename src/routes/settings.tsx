@@ -129,7 +129,71 @@ function SettingsPage() {
 
   useEffect(() => {
     if (user) { void refresh(); void loadConnectors(); }
-  }, [user, refresh]);
+  }, [user, refresh, loadConnectors]);
+
+  const connectorRequest = useCallback(async (method: "GET" | "POST", body?: Record<string, unknown>) => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error("Sign in again to manage connectors.");
+    const response = await fetch("/api/connectors", {
+      method,
+      headers: { Authorization: `Bearer ${token}`, ...(body ? { "content-type": "application/json" } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const result = await response.json().catch(() => ({})) as {
+      error?: string;
+      connectors?: ConnectorRow[];
+      tools?: ConnectorTool[];
+      connector?: ConnectorRow;
+    };
+    if (!response.ok) throw new Error(result.error ?? "Connector request failed.");
+    return result;
+  }, []);
+
+  const loadConnectors = useCallback(async () => {
+    try {
+      const result = await connectorRequest("GET");
+      setConnectors(result.connectors ?? []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load connectors.");
+    }
+  }, [connectorRequest]);
+
+  async function addConnector() {
+    if (!connectorDraft.name.trim() || !connectorDraft.endpoint.trim()) {
+      toast.error("Enter a name and an HTTPS MCP endpoint.");
+      return;
+    }
+    setConnectorBusy(true);
+    try {
+      await connectorRequest("POST", {
+        action: "create",
+        name: connectorDraft.name.trim(),
+        endpoint: connectorDraft.endpoint.trim(),
+        ...(connectorDraft.token.trim() ? { token: connectorDraft.token.trim() } : {}),
+      });
+      setConnectorDraft({ name: "", endpoint: "", token: "" });
+      await loadConnectors();
+      toast.success("MCP connector added.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not add connector.");
+    } finally {
+      setConnectorBusy(false);
+    }
+  }
+
+  async function inspectConnector(connector: ConnectorRow) {
+    setConnectorBusy(true);
+    try {
+      const result = await connectorRequest("POST", { action: "tools", id: connector.id });
+      setConnectorTools((current) => ({ ...current, [connector.id]: result.tools ?? [] }));
+      toast.success(`Connected to ${connector.name}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not reach MCP server.");
+    } finally {
+      setConnectorBusy(false);
+    }
+  }
 
   async function saveSettings(next: Settings) {
     setSettings(next);
