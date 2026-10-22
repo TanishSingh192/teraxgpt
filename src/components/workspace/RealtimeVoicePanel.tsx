@@ -38,9 +38,12 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
   const nextAudioTimeRef = useRef(0);
   const aliveRef = useRef(true);
   const setupCompleteRef = useRef(false);
+  const audioSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
 
   function cleanup() {
     setupCompleteRef.current = false;
+    for (const source of audioSourcesRef.current) { try { source.stop(); } catch { /* already stopped */ } }
+    audioSourcesRef.current.clear();
     const socket = socketRef.current;
     socketRef.current = null;
     if (socket && socket.readyState < WebSocket.CLOSING) socket.close();
@@ -90,12 +93,14 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
       return;
     }
     const serverContent = message.serverContent as Record<string, unknown> | undefined;
-    const inputTranscription = message.inputTranscription as { text?: string } | undefined;
-    const outputTranscription = message.outputTranscription as { text?: string } | undefined;
+    const inputTranscription = (serverContent?.inputTranscription ?? message.inputTranscription) as { text?: string } | undefined;
+    const outputTranscription = (serverContent?.outputTranscription ?? message.outputTranscription) as { text?: string } | undefined;
     if (inputTranscription?.text) addTranscript("You", inputTranscription.text);
     if (outputTranscription?.text) addTranscript("TeraXGPT", outputTranscription.text);
     if (serverContent) {
       if (serverContent.interrupted) {
+        for (const source of audioSourcesRef.current) { try { source.stop(); } catch { /* already stopped */ } }
+        audioSourcesRef.current.clear();
         nextAudioTimeRef.current = outputContextRef.current?.currentTime ?? 0;
         setStatusText("Listening");
       }
@@ -115,6 +120,8 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
         const source = context.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(context.destination);
+        audioSourcesRef.current.add(source);
+        source.onended = () => audioSourcesRef.current.delete(source);
         const startAt = Math.max(context.currentTime + 0.02, nextAudioTimeRef.current);
         source.start(startAt);
         nextAudioTimeRef.current = startAt + audioBuffer.duration;
@@ -237,7 +244,10 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
         }));
       };
       source.connect(processor);
-      processor.connect(inputContext.destination);
+      const silentOutput = inputContext.createGain();
+      silentOutput.gain.value = 0;
+      processor.connect(silentOutput);
+      silentOutput.connect(inputContext.destination);
       setStatusText("Listening");
     } catch (error) {
       cleanup();
