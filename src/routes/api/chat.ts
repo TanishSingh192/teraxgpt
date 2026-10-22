@@ -508,14 +508,14 @@ export const Route = createFileRoute("/api/chat")({
         if (!temporaryChat) system += await personalContext(supabase, pluginEnabled("memory"));
         if (!temporaryChat && body.skillId) system += await skillContext(supabase, body.skillId);
         if (projectId) system += await projectContext(supabase, projectId);
-        if (research) system += `\n\n${RESEARCH_PROMPT}`;
+        if (research) system += engine === "hermes" ? "\n\nDeep Research mode is on. Break the task into sub-questions, use the research and browsing tools available in your Hermes runtime, verify important claims with primary sources where possible, and cite only sources you actually inspected. Be explicit about uncertainty and date-sensitive evidence." : `\n\n${RESEARCH_PROMPT}`;
         if (agent) {
           if (engine !== "hermes") system += `\n\n${AGENT_PROMPT}`;
           system += `\n\nAgent name: ${agent.name}.`;
           if (agent.instructions) system += `\nAgent instructions:\n${agent.instructions}`;
           if (engine !== "hermes") system += `\nTools you may use: ${[...granted].join(", ") || "none"}.`;
         }
-        if (imageMode) {
+        if (imageMode && engine !== "hermes") {
           system += `\n\nThe user selected the ${imageEntry.label} image model. Call generate_image for their request.`;
         }
 
