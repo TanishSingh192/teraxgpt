@@ -411,6 +411,10 @@ export function ChatView({
   async function handleSend() {
     const text = input.trim();
     if ((!text && files.length === 0) || busy) return;
+    if (engineRef.current === "hermes" && files.length > 0) {
+      toast.error("Hermes Agent mode currently supports text-only prompts. Switch to TeraXGPT to use attachments.");
+      return;
+    }
     interruptSpeech();
 
     const { data: auth } = await supabase.auth.getUser();
@@ -473,7 +477,11 @@ export function ChatView({
           <label className="relative flex items-center">
             <select
               value={engine}
-              onChange={(event) => setEngine(event.target.value as "standard" | "hermes")}
+              onChange={(event) => {
+                const next = event.target.value as "standard" | "hermes";
+                setEngine(next);
+                if (next === "hermes") setModelId(AUTO);
+              }}
               disabled={messages.length > 0 || conversationRef.current !== null}
               aria-label="AI engine"
               className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 text-[12px] font-medium outline-none hover:bg-background disabled:opacity-60"
