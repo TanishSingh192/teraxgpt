@@ -42,18 +42,18 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
   function handleEvent(raw: string) {
     let event: Record<string, unknown>;
     try { event = JSON.parse(raw) as Record<string, unknown>; } catch { return; }
-    const type = String(event.type ?? "");
+    const type = String(event["type"] ?? "");
     if (type === "session.created" || type === "session.updated" || type === "response.done") setStatusText("Listening");
     else if (type === "input_audio_buffer.speech_started") setStatusText("I'm listening…");
     else if (type === "response.created") setStatusText("TeraXGPT is speaking");
     else if (type === "conversation.item.input_audio_transcription.completed") {
-      const text = String(event.transcript ?? "").trim();
+      const text = String(event["transcript"] ?? "").trim();
       if (text) setTranscript((items) => [...items, { id: crypto.randomUUID(), role: "You", text }]);
     } else if (type === "response.output_audio_transcript.done") {
-      const text = String(event.transcript ?? "").trim();
+      const text = String(event["transcript"] ?? "").trim();
       if (text) setTranscript((items) => [...items, { id: crypto.randomUUID(), role: "TeraXGPT", text }]);
     } else if (type === "error") {
-      const error = event.error as { message?: string } | undefined;
+      const error = event["error"] as { message?: string } | undefined;
       toast.error(error?.message ?? "Realtime voice encountered an error.");
       setStatusText("Something went wrong");
     }
@@ -80,7 +80,7 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
       channel.onclose = () => { if (aliveRef.current) setStatusText("Connection closed"); };
       const offer = await peer.createOffer(); await peer.setLocalDescription(offer);
       const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
-        method: "POST", body: offer.sdp,
+        method: "POST", body: offer.sdp ?? null,
         headers: { Authorization: `Bearer ${sessionData.clientSecret}`, "Content-Type": "application/sdp" },
       });
       if (!sdpResponse.ok) throw new Error("Could not establish realtime audio. Check network access and OpenAI project settings.");
