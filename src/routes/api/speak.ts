@@ -48,12 +48,17 @@ export const Route = createFileRoute("/api/speak")({
           });
 
           if (!upstream.ok) {
-            const detail = await upstream.text();
-            console.error(`Speech failed [${upstream.status}]: ${detail}`);
-            return new Response(detail, {
-              status: upstream.status,
-              headers: { "content-type": "application/json" },
-            });
+            // Do not expose provider error bodies to clients or logs.
+            console.error(`Speech provider failed [${upstream.status}]`);
+            return Response.json(
+              {
+                error:
+                  upstream.status === 429
+                    ? "Speech service is busy. Please try again shortly."
+                    : "Speech generation failed.",
+              },
+              { status: upstream.status === 429 ? 429 : 502 },
+            );
           }
 
           return new Response(upstream.body, {

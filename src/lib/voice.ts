@@ -177,7 +177,7 @@ export async function speak(text: string, signal: AbortSignal): Promise<void> {
     }
   };
   signal.addEventListener("abort", abort, { once: true });
-  let playback: Promise<void> = Promise.resolve();
+  const playbacks: Promise<void>[] = [];
 
   try {
     if (context.state === "suspended") await context.resume();
@@ -194,16 +194,24 @@ export async function speak(text: string, signal: AbortSignal): Promise<void> {
 
     const parser = createParser({
       onEvent(event) {
-        const payload = JSON.parse(event.data) as { type?: string; audio?: string };
+        let payload: { type?: string; audio?: string };
+        try {
+          payload = JSON.parse(event.data) as { type?: string; audio?: string };
+        } catch {
+          return;
+        }
         if (payload.type === "speech.audio.done") {
           completed = true;
           return;
         }
         if (payload.type !== "speech.audio.delta" || !payload.audio) return;
-        const decoded = decodePCM(
-          pending,
-          Uint8Array.from(atob(payload.audio), (c) => c.charCodeAt(0)),
-        );
+        let audioBytes: Uint8Array;
+        try {
+          audioBytes = Uint8Array.from(atob(payload.audio), (c) => c.charCodeAt(0));
+        } catch {
+          return;
+        }
+        const decoded = decodePCM(pending, audioBytes);
         pending = new Uint8Array(decoded.pending);
         if (!decoded.samples.length) return;
         const buffer = context.createBuffer(1, decoded.samples.length, 24000);
@@ -212,12 +220,13 @@ export async function speak(text: string, signal: AbortSignal): Promise<void> {
         source.buffer = buffer;
         source.connect(context.destination);
         sources.add(source);
-        playback = new Promise<void>((resolve) => {
+        const playback = new Promise<void>((resolve) => {
           source.onended = () => {
             sources.delete(source);
             resolve();
           };
         });
+        playbacks.push(playback);
         playhead = Math.max(playhead, context.currentTime + 0.05);
         source.start(playhead);
         playhead += buffer.duration;
@@ -237,7 +246,7 @@ export async function speak(text: string, signal: AbortSignal): Promise<void> {
     }
 
     if (!completed) throw new Error("The spoken reply was cut short.");
-    await playback;
+    await Promise.all(playbacks);
   } finally {
     signal.removeEventListener("abort", abort);
     controller.abort();
