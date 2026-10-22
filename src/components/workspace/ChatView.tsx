@@ -24,6 +24,7 @@ import { toast } from "sonner";
 
 import { Markdown } from "@/components/workspace/Markdown";
 import { CodeWorkspace } from "@/components/workspace/CodeWorkspace";
+import { RealtimeVoicePanel } from "@/components/workspace/RealtimeVoicePanel";
 import { Button } from "@/components/ui/button";
 import type { TurnInfo } from "@/components/workspace/ContextPanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -232,6 +233,7 @@ export function ChatView({
   temporaryChatRef.current = temporaryChat;
   const [voiceReplies, setVoiceReplies] = useState(false);
   const [liveVoiceMode, setLiveVoiceMode] = useState(false);
+  const [realtimeVoiceOpen, setRealtimeVoiceOpen] = useState(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -703,6 +705,9 @@ export function ChatView({
             >
               <Mic /> {liveVoiceMode ? "Live voice on" : "Live voice"}
             </Button>
+            <Button variant="secondary" size="sm" onClick={() => { interruptSpeech(); setRealtimeVoiceOpen(true); }} title="Start low-latency, hands-free realtime voice conversation">
+              <Volume2 /> Realtime voice
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -1082,6 +1087,7 @@ export function ChatView({
             </section>
           </div>
         )}
+        {realtimeVoiceOpen && <RealtimeVoicePanel onClose={() => setRealtimeVoiceOpen(false)} />}
       </main>
   );
 }
