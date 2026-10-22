@@ -42,14 +42,14 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiConnectorsRoute = ApiConnectorsRouteImport.update({
-  id: '/api/connectors',
-  path: '/api/connectors',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiConnectorsRoute = ApiConnectorsRouteImport.update({
+  id: '/api/connectors',
+  path: '/api/connectors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPluginsRoute = ApiPluginsRouteImport.update({
@@ -134,6 +134,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/settings'
     | '/api/chat'
+    | '/api/connectors'
+    | '/api/plugins'
     | '/api/speak'
     | '/api/transcribe'
     | '/projects/$projectId'
@@ -146,6 +148,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/settings'
     | '/api/chat'
+    | '/api/connectors'
+    | '/api/plugins'
     | '/api/speak'
     | '/api/transcribe'
     | '/projects/$projectId'
@@ -158,6 +162,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/settings'
     | '/api/chat'
+    | '/api/connectors'
+    | '/api/plugins'
     | '/api/speak'
     | '/api/transcribe'
     | '/projects/$projectId'
@@ -210,11 +216,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/plugins': {
-      id: '/api/plugins'
-      path: '/api/plugins'
-      fullPath: '/api/plugins'
-      preLoaderRoute: typeof ApiPluginsRouteImport
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/connectors': {
@@ -224,11 +230,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiConnectorsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/chat': {
-      id: '/api/chat'
-      path: '/api/chat'
-      fullPath: '/api/chat'
-      preLoaderRoute: typeof ApiChatRouteImport
+    '/api/plugins': {
+      id: '/api/plugins'
+      path: '/api/plugins'
+      fullPath: '/api/plugins'
+      preLoaderRoute: typeof ApiPluginsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/speak': {
