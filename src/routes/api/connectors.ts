@@ -18,6 +18,36 @@ const Input = z.discriminatedUnion("action", [
   z.object({ action: z.literal("test"), id: z.string().uuid() }),
 ]);
 
+async function readJsonLimited(request: Request): Promise<unknown> {
+  const declaredLength = Number(request.headers.get("content-length") ?? 0);
+  if (declaredLength > 16_000) throw new Error("too_large");
+  const reader = request.body?.getReader();
+  if (!reader) throw new Error("empty");
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      total += chunk.value.byteLength;
+      if (total > 16_000) {
+        await reader.cancel();
+        throw new Error("too_large");
+      }
+      chunks.push(chunk.value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+}
+
 function userClient(request: Request) {
   const url = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
   const key = process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
@@ -50,7 +80,15 @@ export const Route = createFileRoute("/api/connectors")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if ("response" in auth) return auth.response;
-        const raw = await request.json().catch(() => null);
+        let raw: unknown;
+        try {
+          raw = await readJsonLimited(request);
+        } catch (error) {
+          return Response.json(
+            { error: error instanceof Error && error.message === "too_large" ? "Connector request is too large." : "Invalid connector request body." },
+            { status: error instanceof Error && error.message === "too_large" ? 413 : 400 },
+          );
+        }
         const parsed = Input.safeParse(raw);
         if (!parsed.success) return Response.json({ error: "Invalid connector request." }, { status: 400 });
         try {
