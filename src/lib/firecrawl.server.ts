@@ -40,11 +40,11 @@ function validatePublicWebUrl(input: string): string {
   try { url = new URL(input); } catch { throw new Error("Enter a valid public webpage URL."); }
   if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Only HTTP and HTTPS webpages can be opened.");
   if (url.username || url.password || (url.port && url.port !== "80" && url.port !== "443")) throw new Error("That webpage URL is not allowed.");
-  const host = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   const blocked = !host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") ||
     host === "metadata.google.internal" || host === "metadata.google" || host === "169.254.169.254" || host === "0.0.0.0" || host === "::" || host === "::1" ||
-    /^127\\./.test(host) || /^10\\./.test(host) || /^192\\.168\\./.test(host) || /^169\\.254\\./.test(host) ||
-    /^172\\.(1[6-9]|2\\d|3[01])\\./.test(host) || /^\\d{1,3}(\\.\\d{1,3}){3}$/.test(host) || host.includes(":");
+    /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(":");
   if (blocked) throw new Error("Private, local, and IP-literal URLs cannot be opened.");
   url.hash = "";
   return url.toString();
