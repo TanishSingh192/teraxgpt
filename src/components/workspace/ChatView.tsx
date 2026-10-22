@@ -170,6 +170,7 @@ export function ChatView({
   projectName?: string;
 }) {
   const [modelId, setModelId] = useState<string>(AUTO);
+  const [engine, setEngine] = useState<"standard" | "hermes">("standard");
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [turn, setTurn] = useState<TurnInfo | null>(null);
@@ -189,6 +190,8 @@ export function ChatView({
 
   const modelRef = useRef(modelId);
   modelRef.current = modelId;
+  const engineRef = useRef(engine);
+  engineRef.current = engine;
   const researchRef = useRef(research);
   researchRef.current = research;
   const projectRef = useRef(projectId);
@@ -255,6 +258,7 @@ export function ChatView({
             body: {
               messages,
               modelId: modelRef.current,
+              engine: engineRef.current,
               research: researchRef.current,
               temporaryChat: temporaryChatRef.current,
               projectId: projectRef.current,
@@ -467,8 +471,21 @@ export function ChatView({
         <header className="flex h-14 shrink-0 items-center gap-2 px-3 md:px-5">
           <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="md:hidden" aria-label="Open sidebar"><Menu /></Button>
           <label className="relative flex items-center">
-            <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 font-display text-[15px] font-semibold outline-none hover:bg-background">
-              <option value={AUTO}>TeraX CPT Auto</option>
+            <select
+              value={engine}
+              onChange={(event) => setEngine(event.target.value as "standard" | "hermes")}
+              disabled={messages.length > 0 || conversationRef.current !== null}
+              aria-label="AI engine"
+              className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 text-[12px] font-medium outline-none hover:bg-background disabled:opacity-60"
+            >
+              <option value="standard">TeraXGPT</option>
+              <option value="hermes">Hermes Agent</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
+          </label>
+          <label className="relative flex items-center">
+            <select value={modelId} disabled={engine === "hermes"} onChange={(event) => setModelId(event.target.value)} className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 font-display text-[15px] font-semibold outline-none hover:bg-background disabled:opacity-50">
+              <option value={AUTO}>Auto</option>
               {MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
