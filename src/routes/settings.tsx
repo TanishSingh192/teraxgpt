@@ -127,10 +127,6 @@ function SettingsPage() {
     setSchedules((sc.data ?? []) as ScheduleRow[]);
   }, []);
 
-  useEffect(() => {
-    if (user) { void refresh(); void loadConnectors(); }
-  }, [user, refresh, loadConnectors]);
-
   const connectorRequest = useCallback(async (method: "GET" | "POST", body?: Record<string, unknown>) => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
@@ -194,6 +190,10 @@ function SettingsPage() {
       setConnectorBusy(false);
     }
   }
+
+  useEffect(() => {
+    if (user) { void refresh(); void loadConnectors(); }
+  }, [user, refresh, loadConnectors]);
 
   async function saveSettings(next: Settings) {
     setSettings(next);
