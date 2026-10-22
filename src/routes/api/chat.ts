@@ -223,9 +223,13 @@ export const Route = createFileRoute("/api/chat")({
         const userId = userData.user.id;
 
         const declaredLength = Number(request.headers.get("content-length") ?? 0);
-        if (declaredLength > MAX_REQUEST_BYTES) return Response.json({ error: "Chat request is too large." }, { status: 413 });
+        if (declaredLength > MAX_REQUEST_BYTES) {
+          return Response.json({ error: "Chat request is too large." }, { status: 413 });
+        }
         const reader = request.body?.getReader();
-        if (!reader) return Response.json({ error: "Request body is required." }, { status: 400 });
+        if (!reader) {
+          return Response.json({ error: "Request body is required." }, { status: 400 });
+        }
         const chunks: Uint8Array[] = [];
         let totalBytes = 0;
         try {
@@ -246,16 +250,27 @@ export const Route = createFileRoute("/api/chat")({
         }
         const bodyBytes = new Uint8Array(totalBytes);
         let offset = 0;
-        for (const chunk of chunks) { bodyBytes.set(chunk, offset); offset += chunk.byteLength; }
+        for (const chunk of chunks) {
+          bodyBytes.set(chunk, offset);
+          offset += chunk.byteLength;
+        }
         const rawBody = new TextDecoder().decode(bodyBytes);
         let parsedBody: unknown;
-        try { parsedBody = JSON.parse(rawBody); } catch { return Response.json({ error: "Invalid JSON request body." }, { status: 400 }); }
+        try {
+          parsedBody = JSON.parse(rawBody);
+        } catch {
+          return Response.json({ error: "Invalid JSON request body." }, { status: 400 });
+        }
         const parsedRequest = ChatRequestSchema.safeParse(parsedBody);
-        if (!parsedRequest.success) return Response.json({ error: "Invalid chat request." }, { status: 400 });
+        if (!parsedRequest.success) {
+          return Response.json({ error: "Invalid chat request." }, { status: 400 });
+        }
         const body = parsedRequest.data;
         // The server owns the instructions: callers may only send user/assistant turns.
         const messages = sanitizeMessages(body.messages);
-        if (messages.length === 0) return Response.json({ error: "Send at least one valid chat message." }, { status: 400 });
+        if (messages.length === 0) {
+          return Response.json({ error: "Send at least one valid chat message." }, { status: 400 });
+        }
         const requested = body.modelId ?? AUTO;
         const research = body.research === true;
 
