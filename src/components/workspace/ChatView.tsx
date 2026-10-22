@@ -231,6 +231,7 @@ export function ChatView({
   const temporaryChatRef = useRef(false);
   temporaryChatRef.current = temporaryChat;
   const [voiceReplies, setVoiceReplies] = useState(false);
+  const [liveVoiceMode, setLiveVoiceMode] = useState(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -444,7 +445,11 @@ export function ChatView({
       try {
         const audio = await recorder.stop();
         const transcript = await transcribeAudio(audio);
-        setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+        if (liveVoiceMode) {
+          await handleSend(transcript);
+        } else {
+          setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+        }
       } catch (recordError) {
         toast.error(
           recordError instanceof Error ? recordError.message : "Could not use that recording.",
@@ -462,8 +467,8 @@ export function ChatView({
     }
   }
 
-  async function handleSend() {
-    const text = input.trim();
+  async function handleSend(overrideText?: string) {
+    const text = (overrideText ?? input).trim();
     if ((!text && files.length === 0) || busy) return;
     if (engineRef.current === "agno" && temporaryChatRef.current) {
       toast.error("Agno AgentOS mode requires a saved conversation. Turn off Temporary Chat or switch to TeraXGPT.");
@@ -683,6 +688,20 @@ export function ChatView({
                 if (!temporaryChat) setResearch(false);
               }}>
               <EyeOff /> {temporaryChat ? "Temporary on" : "Temporary chat"}
+            </Button>
+            <Button
+              variant={liveVoiceMode ? "secondary" : "ghost"}
+              size="sm"
+              aria-pressed={liveVoiceMode}
+              title="Enable voice-first conversation with spoken replies"
+              onClick={() => {
+                const next = !liveVoiceMode;
+                setLiveVoiceMode(next);
+                setVoiceReplies(next);
+                if (!next) interruptSpeech();
+              }}
+            >
+              <Mic /> {liveVoiceMode ? "Live voice on" : "Live voice"}
             </Button>
             <Button
               variant="ghost"
@@ -968,8 +987,9 @@ export function ChatView({
                     onClick={() => void toggleRecording()}
                     disabled={transcribing}
                     aria-pressed={recording}
-                    aria-label={recording ? "Stop recording" : "Speak your message"}
-                    className={recording ? "text-signal" : "text-subtle"}
+                    aria-label={recording ? "Stop recording and send" : liveVoiceMode ? "Start speaking to TeraXGPT" : "Speak your message"}
+                    title={liveVoiceMode ? (recording ? "Stop and send your voice message" : "Tap to speak, tap again to send") : undefined}
+                    className={recording ? "text-signal" : liveVoiceMode ? "text-ink" : "text-subtle"}
                   >
                     {transcribing ? (
                       <Loader2 className="animate-spin" />
