@@ -307,7 +307,7 @@ export function ChatView({
       setTurn({ ...meta, cost });
 
       const convId = conversationRef.current;
-      if (temporaryChat) {
+      if (temporaryChatRef.current) {
         const { data: auth } = await supabase.auth.getUser();
         const userId = auth.user?.id;
         if (userId) {
