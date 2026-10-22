@@ -219,7 +219,7 @@ export function ChatView({
   const [modelId, setModelId] = useState<string>(AUTO);
   const [engine, setEngine] = useState<"standard" | "agno">("standard");
   const [input, setInput] = useState("");
-  const [codeWorkspace, setCodeWorkspace] = useState<{ code: string; language: string } | null>(null);
+  const [codeWorkspace, setCodeWorkspace] = useState<{ code: string; language: string; messageId: string } | null>(null);
   const [documentStudioOpen, setDocumentStudioOpen] = useState(false);
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentType, setDocumentType] = useState("report");
@@ -844,8 +844,8 @@ export function ChatView({
                         </div>
                       </div>
                     ))}
-                    <Markdown onOpenInIDE={(code, language) => setCodeWorkspace({ code, language })}>{textOf(message)}</Markdown>
-                    {codeWorkspace && message.role === "assistant" && (
+                    <Markdown onOpenInIDE={(code, language) => setCodeWorkspace({ code, language, messageId: message.id })}>{textOf(message)}</Markdown>
+                    {codeWorkspace?.messageId === message.id && message.role === "assistant" && (
                       <CodeWorkspace
                         initialCode={codeWorkspace.code}
                         language={codeWorkspace.language}
