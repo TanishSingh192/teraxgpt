@@ -231,6 +231,7 @@ export function ChatView({
   const [selectedDocumentMessages, setSelectedDocumentMessages] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
   const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
   const toolbarMenuRef = useRef<HTMLDivElement>(null);
   const [turn, setTurn] = useState<TurnInfo | null>(null);
@@ -275,6 +276,22 @@ export function ChatView({
     speechRef.current = null;
     setSpeaking(false);
   }
+
+  useEffect(() => {
+    if (!addMenuOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!addMenuRef.current?.contains(event.target as Node)) setAddMenuOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAddMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [addMenuOpen]);
 
   useEffect(() => {
     if (!toolbarMenuOpen) return;
@@ -658,7 +675,7 @@ export function ChatView({
               </select>
               <ChevronDown className="pointer-events-none absolute right-1.5 size-3.5 text-subtle sm:right-2" />
             </label>
-            <label className="relative hidden items-center xs:flex">
+            <label className="relative hidden items-center sm:flex">
               <select value={modelId} disabled={engine === "agno"} onChange={(event) => setModelId(event.target.value)} aria-label="AI model" className="max-w-[130px] appearance-none rounded-lg bg-transparent py-2 pl-2 pr-6 font-display text-[13px] font-semibold outline-none hover:bg-background disabled:opacity-50 sm:max-w-none sm:pr-7 sm:text-[15px]">
                 <option value={AUTO}>Auto</option>
                 {MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
@@ -951,7 +968,7 @@ export function ChatView({
                       event.target.value = "";
                     }}
                   />
-                  <div className="relative">
+                  <div className="relative" ref={addMenuRef}>
                     <Button
                       variant="ghost" size="icon"
                       onClick={() => setAddMenuOpen((open) => !open)}
