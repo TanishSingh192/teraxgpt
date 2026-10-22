@@ -28,7 +28,7 @@ export async function encryptConnectorToken(token: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", await encryptionKey(), "AES-GCM", false, ["encrypt"]);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(token));
-  return \`v1.\${encodeBase64Url(iv)}.\${encodeBase64Url(new Uint8Array(encrypted))}\`;
+  return `v1.${encodeBase64Url(iv)}.${encodeBase64Url(new Uint8Array(encrypted))}`;
 }
 
 export async function decryptConnectorToken(value: string | null): Promise<string | undefined> {
@@ -76,7 +76,7 @@ async function rpc(endpoint: string, token: string | undefined, message: JsonRpc
     "content-type": "application/json",
     accept: "application/json, text/event-stream",
   });
-  if (token) headers.set("authorization", \`Bearer \${token}\`);
+  if (token) headers.set("authorization", `Bearer ${token}`);
   if (sessionId) headers.set("mcp-session-id", sessionId);
   const response = await fetch(url, {
     method: "POST",
@@ -85,7 +85,7 @@ async function rpc(endpoint: string, token: string | undefined, message: JsonRpc
     signal: AbortSignal.timeout(12_000),
     redirect: "error",
   });
-  if (!response.ok) throw new Error(\`MCP server returned HTTP \${response.status}.\`);
+  if (!response.ok) throw new Error(`MCP server returned HTTP ${response.status}.`);
   const contentType = response.headers.get("content-type") ?? "";
   let payload: unknown;
   if (contentType.includes("text/event-stream")) {
@@ -109,7 +109,7 @@ export async function listMcpTools(endpoint: string, token?: string): Promise<Mc
   });
   const sessionId = init.sessionId;
   const headers = new Headers({ "content-type": "application/json", accept: "application/json, text/event-stream" });
-  if (token) headers.set("authorization", \`Bearer \${token}\`);
+  if (token) headers.set("authorization", `Bearer ${token}`);
   if (sessionId) headers.set("mcp-session-id", sessionId);
   await fetch(validateMcpEndpoint(endpoint), {
     method: "POST", headers,
@@ -132,7 +132,7 @@ export async function callMcpTool(endpoint: string, token: string | undefined, n
     params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "TeraXGPT", version: "1.0.0" } },
   });
   const headers = new Headers({ "content-type": "application/json", accept: "application/json, text/event-stream" });
-  if (token) headers.set("authorization", \`Bearer \${token}\`);
+  if (token) headers.set("authorization", `Bearer ${token}`);
   if (init.sessionId) headers.set("mcp-session-id", init.sessionId);
   await fetch(validateMcpEndpoint(endpoint), {
     method: "POST", headers,
