@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { ChatView, type AppMessage } from "@/components/workspace/ChatView";
 import { Sidebar, type ConversationRow } from "@/components/workspace/Sidebar";
@@ -9,13 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "TeraX CPT · Unified AI workspace" },
+      { title: "TeraXGPT · Unified AI workspace" },
       {
         name: "description",
         content:
           "One workspace for every AI model: streaming chat, file and image understanding, automatic model routing and usage tracking.",
       },
-      { property: "og:title", content: "TeraX CPT · Unified AI workspace" },
+      { property: "og:title", content: "TeraXGPT · Unified AI workspace" },
       {
         property: "og:description",
         content:
@@ -71,21 +72,26 @@ function Workspace() {
   }, [loading, session, navigate]);
 
   const refreshConversations = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("conversations")
       .select("id,title,updated_at")
       .order("updated_at", { ascending: false })
       .limit(50);
+    if (error) {
+      toast.error("Could not load chat history.");
+      return;
+    }
     setConversations((data as ConversationRow[]) ?? []);
   }, []);
 
   const refreshUsage = useCallback(async () => {
     const since = new Date();
     since.setDate(1);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("usage_records")
       .select("estimated_cost")
       .gte("created_at", since.toISOString());
+    if (error) return;
     const total = (data ?? []).reduce((sum, row) => sum + Number(row.estimated_cost ?? 0), 0);
     setMonthlyCost(total);
   }, []);
@@ -97,22 +103,68 @@ function Workspace() {
   }, [user, refreshConversations, refreshUsage]);
 
   async function openConversation(id: string) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("messages")
       .select("id,role,content,model,routed_reason")
       .eq("conversation_id", id)
       .order("created_at", { ascending: true });
+    if (error) {
+      toast.error("Could not open this conversation. Try again.");
+      return;
+    }
     setInitialMessages(toUiMessages((data as DbMessage[]) ?? []));
     setActiveId(id);
     setChatKey(id);
   }
 
+  async function renameConversation(id: string, title: string) {
+    const previous = conversations.find((conversation) => conversation.id === id)?.title;
+    if (!previous || title === previous) return;
+    const { error } = await supabase
+      .from("conversations")
+      .update({ title, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast.error("Could not rename this chat. Try again.");
+      throw error;
+    }
+    setConversations((current) =>
+      current
+        .map((conversation) =>
+          conversation.id === id
+            ? { ...conversation, title, updated_at: new Date().toISOString() }
+            : conversation,
+        )
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()),
+    );
+    toast.success("Chat renamed.");
+  }
+
   async function deleteConversation(id: string) {
-    if (!window.confirm("Delete this chat? This cannot be undone.")) return;
-    await supabase.from("messages").delete().eq("conversation_id", id);
-    await supabase.from("conversations").delete().eq("id", id);
-    setConversations((prev) => prev.filter((c) => c.id !== id));
+    const conversation = conversations.find((item) => item.id === id);
+    if (!conversation || !window.confirm(`Delete “${conversation.title}”? This cannot be undone.`)) return;
+
+    const { error: messagesError } = await supabase
+      .from("messages")
+      .delete()
+      .eq("conversation_id", id);
+    if (messagesError) {
+      toast.error("Could not delete this chat's messages. Nothing was removed from the history.");
+      return;
+    }
+
+    const { error: conversationError } = await supabase
+      .from("conversations")
+      .delete()
+      .eq("id", id);
+    if (conversationError) {
+      toast.error("Messages were deleted, but the chat record could not be removed. Refresh and try again.");
+      return;
+    }
+
+    setConversations((current) => current.filter((item) => item.id !== id));
     if (activeId === id) newChat();
+    toast.success("Chat deleted.");
   }
 
   function newChat() {
@@ -144,6 +196,7 @@ function Workspace() {
           onSelect={(id) => void openConversation(id)}
           onNew={newChat}
           onDelete={(id) => void deleteConversation(id)}
+          onRename={renameConversation}
           userName={displayName}
           userEmail={user?.email ?? ""}
           mobileOpen={sidebarOpen}
@@ -159,7 +212,7 @@ function Workspace() {
             setActiveId(id);
             setConversations((prev) => [
               { id, title, updated_at: new Date().toISOString() },
-              ...prev,
+              ...prev.filter((conversation) => conversation.id !== id),
             ]);
           }}
           onTitleChange={(id, title) =>
