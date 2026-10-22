@@ -336,6 +336,12 @@ export const Route = createFileRoute("/api/chat")({
 
         // Image entries are generated through a tool, driven by a chat model.
         const imageMode = decision.model.endpoint === "image";
+        if (engine === "agno" && imageMode) {
+          return Response.json(
+            { error: "Image generation is not available in Agno AgentOS mode yet. Switch to TeraXGPT to generate images." },
+            { status: 400 },
+          );
+        }
         const imageEntry = decision.model;
         const model: ModelEntry = imageMode ? getModel(IMAGE_DRIVER_ID) : decision.model;
 
@@ -523,11 +529,22 @@ export const Route = createFileRoute("/api/chat")({
         if (!temporaryChat) system += await personalContext(supabase, pluginEnabled("memory"));
         if (!temporaryChat && body.skillId) system += await skillContext(supabase, body.skillId);
         if (projectId) system += await projectContext(supabase, projectId);
-        if (research) system += `\n\n${RESEARCH_PROMPT}`;
+        if (research) {
+          system += engine === "agno"
+            ? "\n\nDeep Research mode is on. Decompose the task, use the web search tools available in this AgentOS runtime, prefer primary sources when possible, and cite only URLs actually returned by your tools. Do not claim to have opened or verified a page unless a tool did so. Explain uncertainty and date-sensitive evidence."
+            : `\n\n${RESEARCH_PROMPT}`;
+        }
         if (agent) {
-          system += `\n\n${AGENT_PROMPT}\n\nAgent name: ${agent.name}.`;
+          if (engine === "agno") {
+            system += "\n\nYou are running through Agno AgentOS. Use only tools available in this runtime; do not claim access to TeraXGPT-local tools or connectors. For multi-step tasks, plan briefly, execute with available tools, and summarize what you completed.";
+          } else {
+            system += `\n\n${AGENT_PROMPT}`;
+          }
+          system += `\n\nAgent name: ${agent.name}.`;
           if (agent.instructions) system += `\nAgent instructions:\n${agent.instructions}`;
-          system += `\nTools you may use: ${[...granted].join(", ") || "none"}.`;
+          if (engine !== "agno") {
+            system += `\nTools you may use: ${[...granted].join(", ") || "none"}.`;
+          }
         }
         if (imageMode) {
           system += `\n\nThe user selected the ${imageEntry.label} image model. Call generate_image for their request.`;
