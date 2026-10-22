@@ -597,7 +597,7 @@ export function ChatView({
                         className="mb-3 rounded-xl border border-line bg-background px-3 py-2.5"
                       >
                         <div className="text-[12px] text-ink">
-                          Allow this agent to run <strong>{approval.tool.replace(/_/g, " ")}</strong>?
+                          Allow <strong>{approval.tool.replace(/_/g, " ")}</strong> to run?
                         </div>
                         <pre className="mt-1.5 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-panel px-2 py-1.5 text-[11px] text-subtle">
                           {JSON.stringify(approval.input, null, 2)}
