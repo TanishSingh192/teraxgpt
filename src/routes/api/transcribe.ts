@@ -22,7 +22,9 @@ export const Route = createFileRoute("/api/transcribe")({
           return Response.json({ error: "Recording is too long." }, { status: 413 });
         }
 
-        const incoming = await request.formData();
+        let incoming: FormData;
+        try { incoming = await request.formData(); }
+        catch { return Response.json({ error: "Invalid audio upload." }, { status: 400 }); }
         const file = incoming.get("file");
         if (!(file instanceof File) || !file.size || file.size > MAX_BYTES) {
           return Response.json({ error: "No usable audio was recorded." }, { status: 400 });
@@ -36,12 +38,19 @@ export const Route = createFileRoute("/api/transcribe")({
         form.append("file", file, file.name || "recording.wav");
         form.append("response_format", "json");
 
-        const upstream = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}`, "X-Lovable-AIG-SDK": "fetch" },
-          body: form,
-          signal: request.signal,
-        });
+        let upstream: Response;
+        try {
+          upstream = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}`, "X-Lovable-AIG-SDK": "fetch" },
+            body: form,
+            signal: request.signal,
+          });
+        } catch (error) {
+          if ((error as Error)?.name === "AbortError") return new Response(null, { status: 499 });
+          console.error("Audio transcription provider request failed.");
+          return Response.json({ error: "Transcription service is temporarily unavailable." }, { status: 502 });
+        }
 
         return new Response(upstream.body, {
           status: upstream.status,
