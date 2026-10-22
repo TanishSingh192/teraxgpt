@@ -122,7 +122,8 @@ export async function listMcpTools(endpoint: string, token?: string): Promise<Mc
   return tools.filter((t): t is McpTool =>
     Boolean(t) && typeof t === "object" &&
     typeof (t as McpTool).name === "string" &&
-    /^[a-zA-Z0-9_.-]{1,100}$/.test((t as McpTool).name),
+    /^[a-zA-Z0-9_.-]{1,100}$/.test((t as McpTool).name) &&
+    JSON.stringify(t).length <= 16_000,
   ).slice(0, 100);
 }
 
