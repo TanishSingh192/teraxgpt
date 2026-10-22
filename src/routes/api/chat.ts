@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { convertToModelMessages, jsonSchema, stepCountIs, streamText, tool, type UIMessage } from "ai";
 import { z } from "zod";
@@ -166,6 +167,7 @@ const ChatRequestSchema = z.object({
   agentId: z.string().uuid().nullable().optional(),
   skillId: z.string().uuid().nullable().optional(),
   conversationId: z.string().uuid().nullable().optional(),
+  engine: z.enum(["standard", "hermes"]).optional(),
 });
 
 /**
@@ -192,12 +194,6 @@ export const Route = createFileRoute("/api/chat")({
     handlers: {
       POST: async ({ request }) => {
         const apiKey = process.env["LOVABLE_API_KEY"];
-        if (!apiKey) {
-          return new Response(JSON.stringify({ error: "AI is not configured." }), {
-            status: 500,
-            headers: { "content-type": "application/json" },
-          });
-        }
 
         // Authenticate the caller with their app session.
         const authHeader = request.headers.get("authorization") ?? "";
@@ -272,6 +268,16 @@ export const Route = createFileRoute("/api/chat")({
           return Response.json({ error: "Invalid chat request." }, { status: 400 });
         }
         const body = parsedRequest.data;
+        const engine = body.engine ?? "standard";
+        if (engine === "standard" && !apiKey) {
+          return Response.json({ error: "AI is not configured." }, { status: 500 });
+        }
+        if (engine === "hermes" && !process.env["HERMES_BASE_URL"]) {
+          return Response.json(
+            { error: "Hermes Agent is not configured. Set HERMES_BASE_URL on the server." },
+            { status: 503 },
+          );
+        }
         // The server owns the instructions: callers may only send user/assistant turns.
         const messages = sanitizeMessages(body.messages);
         if (messages.length === 0) {
@@ -512,7 +518,7 @@ export const Route = createFileRoute("/api/chat")({
           system += `\n\nThe user selected the ${imageEntry.label} image model. Call generate_image for their request.`;
         }
 
-        const hasTools = Object.keys(toolbox).length > 0;
+        const hasTools = engine !== "hermes" && Object.keys(toolbox).length > 0;
         const shared = {
           system,
           messages: modelMessages,
@@ -521,7 +527,18 @@ export const Route = createFileRoute("/api/chat")({
         };
 
         const result =
-          model.endpoint === "responses"
+          engine === "hermes"
+            ? streamText({
+                model: createOpenAICompatible({
+                  name: "hermes",
+                  baseURL: (process.env["HERMES_BASE_URL"] as string).replace(/\\/+$/, "") + "/v1",
+                  ...(process.env["HERMES_API_KEY"]
+                    ? { headers: { Authorization: "Bearer " + process.env["HERMES_API_KEY"] } }
+                    : {}),
+                }).chatModel(process.env["HERMES_MODEL"] || "hermes-agent"),
+                ...shared,
+              })
+            : model.endpoint === "responses"
             ? (() => {
                 const runIdFetch = createLovableAiGatewayRunIdFetch(initialRunId);
                 const lovable = createOpenAI({
@@ -557,11 +574,11 @@ export const Route = createFileRoute("/api/chat")({
           messageMetadata: ({ part }) => {
             if (part.type === "start") {
               return {
-                modelId: imageMode ? imageEntry.id : model.id,
-                modelLabel: imageMode ? `${imageEntry.label} + ${model.label}` : model.label,
-                provider: model.provider,
-                task: decision.task,
-                reason: decision.reason,
+                modelId: model.id,
+                modelLabel: engine === "hermes" ? "Hermes Agent" : imageMode ? `${imageEntry.label} + ${model.label}` : model.label,
+                provider: engine === "hermes" ? "hermes" : model.provider,
+                task: engine === "hermes" ? "Agent execution" : decision.task,
+                reason: engine === "hermes" ? "routed to the configured Hermes Agent service" : decision.reason,
                 ...(agent ? { agentName: agent.name } : {}),
               };
             }
