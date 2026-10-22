@@ -323,6 +323,9 @@ export const Route = createFileRoute("/api/chat")({
           .eq("user_id", userId);
         const pluginEnabled = (pluginId: string) =>
           (pluginRows ?? []).find((row) => row.plugin_id === pluginId)?.enabled ?? true;
+        if (research && !pluginEnabled("web_research")) {
+          return Response.json({ error: "Enable Web research in Settings → Plugins to use Deep Research." }, { status: 409 });
+        }
 
         // Permissions: an agent may only use the tools it was granted.
         const granted = new Set<ToolId>(
