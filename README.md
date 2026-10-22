@@ -190,6 +190,7 @@ The current `.env.example` includes the following variables:
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Client-side publishable key |
 | `VITE_SUPABASE_URL` | Client-side Supabase URL |
 | `CONNECTOR_ENCRYPTION_KEY` | Stable server-only key used to encrypt stored MCP bearer tokens |
+| `GEMINI_API_KEY` | Optional server-only Gemini Live ephemeral-session token creation; required to use live voice |
 
 Generate a connector encryption key with:
 
@@ -197,7 +198,7 @@ Generate a connector encryption key with:
 openssl rand -hex 32
 ```
 
-Never use a `VITE_*` prefix for server secrets. Never commit a populated `.env` file or expose provider credentials in client code. Additional provider variables may be required by the deployment platform or AI gateway; verify those requirements in the provider integration code.
+Never use a `VITE_*` prefix for server secrets. Never commit a populated `.env` file or expose provider credentials in client code. Keep `GEMINI_API_KEY` server-side; the browser receives only a short-lived, single-use Live session token. Additional provider variables may be required by the deployment platform or AI gateway; verify those requirements in the provider integration code.
 
 ## Database migrations
 
