@@ -218,6 +218,10 @@ export function ChatView({
   const [modelId, setModelId] = useState<string>(AUTO);
   const [engine, setEngine] = useState<"standard" | "agno">("standard");
   const [input, setInput] = useState("");
+  const [documentStudioOpen, setDocumentStudioOpen] = useState(false);
+  const [documentTitle, setDocumentTitle] = useState("");
+  const [documentType, setDocumentType] = useState("report");
+  const [selectedDocumentMessages, setSelectedDocumentMessages] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [turn, setTurn] = useState<TurnInfo | null>(null);
   const [research, setResearch] = useState(false);
@@ -522,6 +526,41 @@ export function ChatView({
 
   const activeModelLabel = modelId === AUTO ? "Auto" : getModel(modelId).label;
 
+  const assistantMessages = messages.filter((message) => message.role === "assistant" && textOf(message).trim());
+  const documentBody = assistantMessages.filter((message) => selectedDocumentMessages.includes(message.id)).map((message) => textOf(message).trim()).join("\n\n---\n\n");
+  const documentHeading = documentTitle.trim() || "TeraXGPT document";
+
+  function openDocumentStudio() {
+    setDocumentTitle(initialTitle.trim() || "");
+    setDocumentType("report");
+    setSelectedDocumentMessages(assistantMessages.map((message) => message.id));
+    setDocumentStudioOpen(true);
+  }
+
+  function studioMarkdown() {
+    const labels: Record<string, string> = { report: "Report", proposal: "Proposal", letter: "Letter", summary: "Summary", notes: "Study notes", custom: "Document" };
+    return `# ${documentHeading}\n\n**Document type:** ${labels[documentType] ?? "Document"}\n\n${documentBody}`;
+  }
+
+  function downloadStudioDocument() {
+    if (!documentBody.trim()) { toast.error("Select at least one assistant response to include."); return; }
+    const blob = new Blob(["\\ufeff", documentHtml(documentHeading, studioMarkdown())], { type: "application/msword;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeName = documentHeading.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\\s+/g, "-").slice(0, 80);
+    link.href = url; link.download = `${safeName || "teraxgpt-document"}.doc`;
+    document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+    toast.success("Word-compatible document downloaded.");
+  }
+
+  function printStudioDocument() {
+    if (!documentBody.trim()) { toast.error("Select at least one assistant response to include."); return; }
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) { toast.error("Allow pop-ups to create a PDF, then try again."); return; }
+    printWindow.document.open(); printWindow.document.write(documentHtml(documentHeading, studioMarkdown())); printWindow.document.close();
+    printWindow.document.title = documentHeading; printWindow.focus(); printWindow.setTimeout(() => printWindow.print(), 250);
+  }
+
   function exportConversation() {
     const title = initialTitle.trim() || "TeraXGPT conversation";
     const sections = messages.map((message) => {
@@ -619,6 +658,7 @@ export function ChatView({
             </label>
           )}
           <div className="ml-auto flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={openDocumentStudio} disabled={assistantMessages.length === 0 || busy} aria-label="Open Document Studio"><FileText /> Document Studio</Button>
             <Button
               variant="ghost"
               size="sm"
@@ -987,6 +1027,32 @@ export function ChatView({
             <p className="mt-2 text-center text-[10px] text-subtle">TeraX CPT can make mistakes. Check important information.</p>
           </div>
         </div>
+        {documentStudioOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDocumentStudioOpen(false); }}>
+            <section role="dialog" aria-modal="true" aria-labelledby="document-studio-title" className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-panel shadow-2xl">
+              <header className="flex items-center gap-3 border-b border-border px-5 py-4">
+                <div className="grid size-10 place-items-center rounded-xl bg-signal-soft text-ink"><FileText /></div>
+                <div className="min-w-0 flex-1"><h2 id="document-studio-title" className="font-display text-lg font-semibold">Document Studio</h2><p className="text-xs text-subtle">Assemble selected answers into a formatted document.</p></div>
+                <Button variant="ghost" size="icon" onClick={() => setDocumentStudioOpen(false)} aria-label="Close Document Studio"><X /></Button>
+              </header>
+              <div className="grid min-h-0 flex-1 gap-0 overflow-y-auto md:grid-cols-[minmax(240px,0.8fr)_minmax(0,1.2fr)]">
+                <div className="space-y-4 border-b border-border p-5 md:border-b-0 md:border-r">
+                  <label className="block space-y-1.5"><span className="text-sm font-medium">Document title</span><input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} placeholder="e.g. Market Research Report" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" /></label>
+                  <label className="block space-y-1.5"><span className="text-sm font-medium">Document type</span><select value={documentType} onChange={(event) => setDocumentType(event.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"><option value="report">Report</option><option value="proposal">Proposal</option><option value="letter">Letter</option><option value="summary">Summary</option><option value="notes">Study notes</option><option value="custom">Other document</option></select></label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">Include responses</span><button type="button" className="text-xs text-subtle underline" onClick={() => setSelectedDocumentMessages(selectedDocumentMessages.length === assistantMessages.length ? [] : assistantMessages.map((message) => message.id))}>{selectedDocumentMessages.length === assistantMessages.length ? "Select none" : "Select all"}</button></div>
+                    <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-border p-3">
+                      {assistantMessages.map((message, index) => <label key={message.id} className="flex cursor-pointer items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={selectedDocumentMessages.includes(message.id)} onChange={(event) => setSelectedDocumentMessages((current) => event.target.checked ? [...current, message.id] : current.filter((id) => id !== message.id))} /><span className="min-w-0"><span className="block font-medium">Response {index + 1}</span><span className="block text-xs text-subtle">{textOf(message).replace(/\\s+/g, " ").slice(0, 110)}{textOf(message).length > 110 ? "…" : ""}</span></span></label>)}
+                      {assistantMessages.length === 0 && <p className="text-sm text-subtle">No assistant responses to include yet.</p>}
+                    </div>
+                  </div>
+                </div>
+                <div className="min-h-64 overflow-y-auto bg-background/50 p-5"><div className="mx-auto min-h-full max-w-2xl rounded-lg border border-border bg-panel p-6 shadow-sm sm:p-8"><p className="mb-5 text-[10px] uppercase tracking-[0.18em] text-subtle">{documentType === "custom" ? "Document" : documentType}</p><h1 className="mb-5 font-display text-2xl font-bold">{documentHeading}</h1>{documentBody ? <Markdown>{documentBody}</Markdown> : <p className="text-sm text-subtle">Select one or more assistant responses to preview the document.</p>}</div></div>
+              </div>
+              <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4"><p className="text-xs text-subtle">Word export is compatible .doc; PDF uses your browser’s print dialog.</p><div className="flex flex-wrap gap-2"><Button variant="ghost" onClick={() => setDocumentStudioOpen(false)}>Cancel</Button><Button variant="outline" onClick={printStudioDocument} disabled={!documentBody.trim()}><Printer /> Save as PDF</Button><Button onClick={downloadStudioDocument} disabled={!documentBody.trim()}><Download /> Download Word file</Button></div></footer>
+            </section>
+          </div>
+        )}
       </main>
   );
 }
