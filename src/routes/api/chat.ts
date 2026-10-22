@@ -59,7 +59,7 @@ type SettingsRow = {
 };
 
 /** Personalization + durable memory the user controls in Settings. */
-async function personalContext(supabase: SupabaseClient) {
+async function personalContext(supabase: SupabaseClient, includeMemory = true) {
   const [settings, memory] = await Promise.all([
     supabase
       .from("user_settings")
@@ -80,7 +80,7 @@ async function personalContext(supabase: SupabaseClient) {
   if (row?.occupation) lines.push(`What they do: ${row.occupation}.`);
   if (row?.traits) lines.push(`How they want you to respond: ${row.traits}.`);
   if (row?.custom_instructions) lines.push(`Their standing instructions:\n${row.custom_instructions}`);
-  if ((row?.memory_enabled ?? true) && memories.length) {
+  if (includeMemory && (row?.memory_enabled ?? true) && memories.length) {
     lines.push(
       `Things you remember about them (use when relevant, never recite the whole list):\n${memories
         .map((m) => `- ${m.content}`)
@@ -496,7 +496,7 @@ export const Route = createFileRoute("/api/chat")({
         const modelMessages = await convertToModelMessages(messages);
 
         let system = SYSTEM_PROMPT;
-        if (!temporaryChat) system += await personalContext(supabase);
+        if (!temporaryChat) system += await personalContext(supabase, pluginEnabled("memory"));
         if (!temporaryChat && body.skillId) system += await skillContext(supabase, body.skillId);
         if (projectId) system += await projectContext(supabase, projectId);
         if (research) system += `\n\n${RESEARCH_PROMPT}`;
