@@ -510,9 +510,10 @@ export const Route = createFileRoute("/api/chat")({
         if (projectId) system += await projectContext(supabase, projectId);
         if (research) system += `\n\n${RESEARCH_PROMPT}`;
         if (agent) {
-          system += `\n\n${AGENT_PROMPT}\n\nAgent name: ${agent.name}.`;
+          if (engine !== "hermes") system += `\n\n${AGENT_PROMPT}`;
+          system += `\n\nAgent name: ${agent.name}.`;
           if (agent.instructions) system += `\nAgent instructions:\n${agent.instructions}`;
-          system += `\nTools you may use: ${[...granted].join(", ") || "none"}.`;
+          if (engine !== "hermes") system += `\nTools you may use: ${[...granted].join(", ") || "none"}.`;
         }
         if (imageMode) {
           system += `\n\nThe user selected the ${imageEntry.label} image model. Call generate_image for their request.`;
@@ -531,7 +532,7 @@ export const Route = createFileRoute("/api/chat")({
             ? streamText({
                 model: createOpenAICompatible({
                   name: "hermes",
-                  baseURL: (process.env["HERMES_BASE_URL"] as string).replace(/\\/+$/, "") + "/v1",
+                  baseURL: (process.env["HERMES_BASE_URL"] as string) + "/v1",
                   ...(process.env["HERMES_API_KEY"]
                     ? { headers: { Authorization: "Bearer " + process.env["HERMES_API_KEY"] } }
                     : {}),
