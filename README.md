@@ -47,6 +47,7 @@ TeraXGPT brings chat, model selection, web research, image generation, saved con
 - **Deep Research mode:** research-oriented prompting, web search, source reading, source cross-checking, and citation guidance.
 - **Image generation:** server-side image generation tool when configured and enabled.
 - **Image understanding:** requests containing an image are routed to a configured vision-capable model.
+- **Optional Hermes Agent runtime:** route a fresh chat to a separately hosted Hermes Agent service using its OpenAI-compatible API. See [Hermes Agent setup](docs/HERMES_AGENT.md); the standard TeraXGPT engine remains the default.
 - **Usage tracking:** request/model usage metadata is recorded by the application.
 
 ### Privacy and extensibility
@@ -120,6 +121,7 @@ For a more detailed breakdown, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | Schema/migrations | Drizzle ORM and SQL migrations |
 | Research | Firecrawl-backed web search and page reading |
 | External tools | Remote HTTPS Model Context Protocol (MCP) connectors |
+| Agent runtime | Native TeraXGPT tools, with optional external Hermes Agent API integration |
 | Validation | Zod |
 
 Provider availability and model IDs are determined by the current model registry and gateway configuration. Check the code and deployment configuration before assuming a specific provider/model is enabled.
