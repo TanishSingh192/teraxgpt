@@ -4,12 +4,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUp,
   Bot,
+  AudioLines,
+  BrainCircuit,
   ChevronDown,
+  Code2,
   FileText,
   Printer,
   Download,
   Globe,
   EyeOff,
+  ImagePlus,
   Loader2,
   Menu,
   MoreHorizontal,
@@ -18,6 +22,7 @@ import {
   Plus,
   Sparkles,
   Puzzle,
+  Search,
   RotateCcw,
   Square,
   Volume2,
@@ -727,24 +732,103 @@ export function ChatView({
         </header>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-44 pt-8 md:px-8">
-          <div className="mx-auto max-w-[760px]">
+          <div className={messages.length === 0 ? "mx-auto w-full max-w-[1160px]" : "mx-auto max-w-[760px]"}>
             {messages.length === 0 && (
-              <div className="flex min-h-[52vh] flex-col items-center justify-center text-center">
-                <div className="mb-5 grid size-11 place-items-center rounded-xl bg-ink text-primary-foreground"><Bot className="size-5" /></div>
-                <h1 className="font-display text-[28px] font-semibold">
-                  How can I help you today?
-                </h1>
-                <p className="mt-2 max-w-md text-[14px] text-subtle">
-                  Ask a question, create something, or attach a file to get started.
-                </p>
-                <div className="mt-8 grid w-full max-w-[620px] grid-cols-1 gap-2 sm:grid-cols-2">
-                  {CAPABILITY_PROMPTS.map((item) => (
-                    <Button key={item.label} variant="outline" onClick={() => setInput(item.prompt)} className="h-auto justify-start rounded-xl border-line px-4 py-3 text-left shadow-none">
-                      <span><span className="block text-[13px] font-medium text-ink">{item.label}</span><span className="block text-[12px] font-normal text-subtle">Start with a guided prompt</span></span>
-                    </Button>
-                  ))}
+              <section className="terax-launch relative isolate flex min-h-[min(700px,76vh)] flex-col justify-center overflow-hidden rounded-[28px] px-4 py-8 sm:px-8 sm:py-10 lg:px-12">
+                <div className="terax-launch-grid pointer-events-none absolute inset-0 -z-20" />
+                <div className="terax-launch-glow pointer-events-none absolute -right-20 -top-24 -z-10 size-80 rounded-full blur-3xl sm:size-[26rem]" />
+                <div className="pointer-events-none absolute -left-20 bottom-0 -z-10 size-64 rounded-full bg-violet-500/[0.08] blur-3xl" />
+                <div className="mb-9 flex items-center gap-2 self-start rounded-full border border-line/70 bg-panel/70 px-3 py-1.5 backdrop-blur-xl">
+                  <span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" /><span className="relative inline-flex size-2 rounded-full bg-emerald-400" /></span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-subtle">TeraX Intelligence System</span>
+                  <span className="mx-1 h-3 w-px bg-line" />
+                  <span className="text-[10px] text-subtle">{engine === "agno" ? "AgentOS" : activeModelLabel}</span>
                 </div>
-              </div>
+                <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_240px] lg:gap-5">
+                  <div className="min-w-0">
+                    <div className="terax-signal mb-5 grid size-[68px] place-items-center rounded-[22px] border border-white/10 text-white shadow-[0_12px_60px_rgba(72,91,255,0.2)] sm:size-[82px]">
+                      <div className="terax-signal-core grid size-12 place-items-center rounded-2xl border border-white/20 bg-white/10 sm:size-14"><BrainCircuit className="size-7 sm:size-8" /></div>
+                    </div>
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em] text-subtle">One interface. Many kinds of intelligence.</p>
+                    <h1 className="max-w-2xl font-display text-[clamp(2.5rem,7vw,5.5rem)] font-semibold leading-[0.92] tracking-[-0.065em] text-ink">
+                      Think beyond
+                      <span className="terax-gradient-text block pb-2">the chat box.</span>
+                    </h1>
+                    <p className="mt-5 max-w-lg text-[14px] leading-7 text-subtle sm:text-[15px]">
+                      Research the unknown. Build the impossible. Turn rough ideas into something real — with the right intelligence for the job.
+                    </p>
+                    <div className="mt-7 flex flex-wrap items-center gap-3">
+                      <button type="button" onClick={() => { setInput("Help me explore an ambitious idea: "); document.getElementById("terax-composer")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="group inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-[13px] font-medium text-primary-foreground transition-transform hover:-translate-y-0.5">
+                        Start exploring <ArrowUp className="size-4 rotate-45 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      </button>
+                      <button type="button" onClick={() => { interruptSpeech(); setRealtimeVoiceOpen(true); }} className="inline-flex items-center gap-2 rounded-full border border-line bg-panel/65 px-4 py-3 text-[13px] font-medium text-ink backdrop-blur transition-colors hover:bg-background">
+                        <AudioLines className="size-4 text-violet-500" /> Enter Gemini Live
+                      </button>
+                    </div>
+                  </div>
+                  <div className="relative mx-auto hidden w-full max-w-[220px] items-center justify-center lg:flex">
+                    <div className="terax-orbit terax-orbit-one absolute size-52 rounded-full border border-blue-500/20" />
+                    <div className="terax-orbit terax-orbit-two absolute size-44 rounded-full border border-violet-500/20" />
+                    <div className="terax-orbit terax-orbit-three absolute size-36 rounded-full border border-cyan-500/20" />
+                    <div className="terax-launch-core relative grid size-28 place-items-center rounded-[34px] border border-white/20 shadow-[0_0_80px_rgba(80,95,255,0.24)]"><BrainCircuit className="size-12 text-white" /></div>
+                    <span className="absolute right-0 top-7 rounded-full border border-line/70 bg-panel/80 px-2.5 py-1 text-[10px] text-subtle backdrop-blur">Reason</span>
+                    <span className="absolute -left-1 top-20 rounded-full border border-line/70 bg-panel/80 px-2.5 py-1 text-[10px] text-subtle backdrop-blur">Create</span>
+                    <span className="absolute bottom-7 right-1 rounded-full border border-line/70 bg-panel/80 px-2.5 py-1 text-[10px] text-subtle backdrop-blur">Discover</span>
+                  </div>
+                </div>
+                <div className="mt-11 border-t border-line/70 pt-5 sm:mt-14">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-subtle">Choose your direction</p><p className="mt-1 text-[12px] text-subtle/80">A few ways to get momentum.</p></div>
+                    <span className="hidden text-[10px] uppercase tracking-[0.16em] text-subtle sm:inline">01 — 04</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                    <button type="button" onClick={() => setInput("Research this topic deeply, compare credible sources, and give me a concise evidence-based brief: ")} className="terax-capability group text-left">
+                      <span className="terax-capability-icon bg-blue-500/10 text-blue-500"><Search className="size-5" /></span>
+                      <span className="mt-4 block text-[13px] font-semibold text-ink">Investigate</span>
+                      <span className="mt-1 block text-[11px] leading-5 text-subtle">Go deeper than a quick answer.</span>
+                      <span className="terax-capability-arrow mt-3 inline-flex text-[11px] font-medium">Start research <ArrowUp className="ml-1 size-3.5 rotate-45" /></span>
+                    </button>
+                    <button type="button" onClick={() => setInput("Help me design and implement this software idea. Start with architecture, then produce a working first version: ")} className="terax-capability group text-left">
+                      <span className="terax-capability-icon bg-violet-500/10 text-violet-500"><Code2 className="size-5" /></span>
+                      <span className="mt-4 block text-[13px] font-semibold text-ink">Build something</span>
+                      <span className="mt-1 block text-[11px] leading-5 text-subtle">Turn a concept into a system.</span>
+                      <span className="terax-capability-arrow mt-3 inline-flex text-[11px] font-medium">Enter build mode <ArrowUp className="ml-1 size-3.5 rotate-45" /></span>
+                    </button>
+                    <button type="button" onClick={() => { setInput("Generate an image of "); document.getElementById("terax-composer")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="terax-capability group text-left">
+                      <span className="terax-capability-icon bg-pink-500/10 text-pink-500"><ImagePlus className="size-5" /></span>
+                      <span className="mt-4 block text-[13px] font-semibold text-ink">Create visuals</span>
+                      <span className="mt-1 block text-[11px] leading-5 text-subtle">Make an idea visible.</span>
+                      <span className="terax-capability-arrow mt-3 inline-flex text-[11px] font-medium">Create an image <ArrowUp className="ml-1 size-3.5 rotate-45" /></span>
+                    </button>
+                    <button type="button" onClick={() => { setInput("Explain this step by step, using an intuitive example first: "); document.getElementById("terax-composer")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="terax-capability group text-left">
+                      <span className="terax-capability-icon bg-emerald-500/10 text-emerald-500"><Bot className="size-5" /></span>
+                      <span className="mt-4 block text-[13px] font-semibold text-ink">Understand anything</span>
+                      <span className="mt-1 block text-[11px] leading-5 text-subtle">Make complex ideas click.</span>
+                      <span className="terax-capability-arrow mt-3 inline-flex text-[11px] font-medium">Start learning <ArrowUp className="ml-1 size-3.5 rotate-45" /></span>
+                    </button>
+                  </div>
+                </div>
+                <style>{`
+                  .terax-launch-grid { background-image: linear-gradient(to right, hsl(var(--line) / .42) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--line) / .42) 1px, transparent 1px); background-size: 42px 42px; mask-image: linear-gradient(to bottom, black, transparent 85%); opacity: .26; }
+                  .terax-launch-glow { background: radial-gradient(circle, rgba(90,103,255,.2), rgba(112,72,255,.08) 42%, transparent 72%); animation: terax-glow-drift 9s ease-in-out infinite alternate; }
+                  .terax-signal { background: linear-gradient(135deg, #141827, #4d42b8 52%, #188fbc); }
+                  .terax-signal-core { box-shadow: inset 0 0 24px rgba(255,255,255,.1), 0 0 34px rgba(125,104,255,.25); }
+                  .terax-gradient-text { background: linear-gradient(100deg, #7c78ff 0%, #b47dff 36%, #49bde7 76%, #5c91ff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+                  .terax-launch-core { background: radial-gradient(circle at 35% 20%, #8c8aff, #4e4ab7 42%, #111827 78%); animation: terax-core-float 5s ease-in-out infinite; }
+                  .terax-orbit { animation: terax-orbit-spin 22s linear infinite; }
+                  .terax-orbit-two { animation-duration: 17s; animation-direction: reverse; }
+                  .terax-orbit-three { animation-duration: 12s; border-style: dashed; }
+                  .terax-capability { position: relative; min-height: 166px; padding: 16px; border: 1px solid hsl(var(--line) / .8); border-radius: 18px; background: hsl(var(--panel) / .72); transition: transform .22s ease, border-color .22s ease, background .22s ease; backdrop-filter: blur(12px); }
+                  .terax-capability:hover { transform: translateY(-4px); border-color: rgba(112,106,255,.55); background: hsl(var(--panel) / .95); }
+                  .terax-capability-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; }
+                  .terax-capability-arrow { color: hsl(var(--muted-foreground)); transition: color .2s ease, transform .2s ease; }
+                  .terax-capability:hover .terax-capability-arrow { color: hsl(var(--foreground)); transform: translateX(2px); }
+                  @keyframes terax-glow-drift { from { transform: translate3d(0,0,0) scale(.94); } to { transform: translate3d(-24px,20px,0) scale(1.08); } }
+                  @keyframes terax-core-float { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(2deg); } }
+                  @keyframes terax-orbit-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                  @media (prefers-reduced-motion: reduce) { .terax-launch-glow, .terax-launch-core, .terax-orbit { animation: none; } .terax-capability { transition: none; } }
+                `}</style>
+              </section>
             )}
 
             {messages.map((message) =>
