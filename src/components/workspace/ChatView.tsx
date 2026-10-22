@@ -495,11 +495,11 @@ export function ChatView({
       return [
         `## ${role}`,
         text,
-        attachments.length ? `**Attachments**\\n${attachments.join("\\n")}` : "",
-        trail.length ? `**Research trail**\\n${trail.join("\\n")}` : "",
+        attachments.length ? `**Attachments**\n${attachments.join("\n")}` : "",
+        trail.length ? `**Research trail**\n${trail.join("\n")}` : "",
       ]
         .filter(Boolean)
-        .join("\\n\\n");
+        .join("\n\n");
     });
     const markdown = [
       `# ${title}`,
@@ -507,11 +507,11 @@ export function ChatView({
       `Engine: ${engine === "agno" ? "Agno AgentOS" : "TeraXGPT"}`,
       "",
       ...sections,
-    ].join("\\n\\n---\\n\\n");
+    ].join("\n\n---\n\n");
     const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const safeName = title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\\s+/g, "-").slice(0, 80);
+    const safeName = title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 80);
     link.href = url;
     link.download = `${safeName || "teraxgpt-conversation"}.md`;
     document.body.appendChild(link);
