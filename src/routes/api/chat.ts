@@ -525,7 +525,9 @@ export const Route = createFileRoute("/api/chat")({
 
         const modelMessages = await convertToModelMessages(messages);
 
-        let system = SYSTEM_PROMPT;
+        let system = engine === "agno"
+          ? "You are TeraXGPT, an AI workspace assistant running through Agno AgentOS. This mode supports text prompts and web search only. Do not claim to process attachments or generate images."
+          : SYSTEM_PROMPT;
         if (!temporaryChat) system += await personalContext(supabase, pluginEnabled("memory"));
         if (!temporaryChat && body.skillId) system += await skillContext(supabase, body.skillId);
         if (projectId) system += await projectContext(supabase, projectId);
