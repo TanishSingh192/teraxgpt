@@ -6,7 +6,7 @@ export type McpTool = {
 
 type JsonRpc = { jsonrpc: "2.0"; id: number; method: string; params?: unknown };
 
-async function encryptionKey(): Promise<Uint8Array> {
+async function encryptionKey(): Promise<Uint8Array<ArrayBuffer>> {
   const secret = process.env["CONNECTOR_ENCRYPTION_KEY"];
   if (!secret || secret.length < 32) throw new Error("CONNECTOR_ENCRYPTION_KEY must be set to a stable secret of at least 32 characters.");
   return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret)));
@@ -18,7 +18,7 @@ function encodeBase64Url(bytes: Uint8Array): string {
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/g, "");
 }
 
-function decodeBase64Url(value: string): Uint8Array {
+function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
   const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
   const binary = atob(base64 + "=".repeat((4 - (base64.length % 4)) % 4));
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
