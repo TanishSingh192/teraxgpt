@@ -15,9 +15,9 @@ export async function requireUser(
   if (!/^Bearer [^\s,]+$/.test(authHeader)) return unauthorized;
   const accessToken = authHeader.slice("Bearer ".length);
 
-  const supabaseUrl = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
+  const supabaseUrl = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"] || import.meta.env.VITE_SUPABASE_URL;
   const anonKey =
-    process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
+    process.env["SUPABASE_PUBLISHABLE_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env["SUPABASE_ANON_KEY"];
   if (!supabaseUrl || !anonKey) {
     return { response: Response.json({ error: "Sign-in is not configured." }, { status: 500 }) };
   }

@@ -208,9 +208,9 @@ export const Route = createFileRoute("/api/chat")({
         const accessToken = authHeader.startsWith("Bearer ")
           ? authHeader.slice("Bearer ".length)
           : "";
-        const supabaseUrl = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
+        const supabaseUrl = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"] || import.meta.env.VITE_SUPABASE_URL;
         const anonKey =
-          process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
+          process.env["SUPABASE_PUBLISHABLE_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env["SUPABASE_ANON_KEY"];
         if (!accessToken || !supabaseUrl || !anonKey) {
           return new Response(JSON.stringify({ error: "Sign in to chat." }), {
             status: 401,
