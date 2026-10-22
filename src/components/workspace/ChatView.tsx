@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { Markdown } from "@/components/workspace/Markdown";
 import { CodeWorkspace } from "@/components/workspace/CodeWorkspace";
 import { RealtimeVoicePanel } from "@/components/workspace/RealtimeVoicePanel";
+import { CoworkerWorkspace } from "@/components/workspace/CoworkerWorkspace";
 import { Button } from "@/components/ui/button";
 import type { TurnInfo } from "@/components/workspace/ContextPanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -1185,6 +1186,7 @@ export function ChatView({
             </section>
           </div>
         )}
+        <CoworkerWorkspace conversationId={conversationId} />
         {realtimeVoiceOpen && <RealtimeVoicePanel onClose={() => setRealtimeVoiceOpen(false)} />}
       </main>
   );
