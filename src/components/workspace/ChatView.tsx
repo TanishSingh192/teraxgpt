@@ -479,7 +479,7 @@ export function ChatView({
               {projectName}
             </span>
           )}
-          {agents.length > 0 && (
+          {agents.length > 0 && !temporaryChat && (
             <label className="relative flex items-center">
               <select
                 value={agentId}
@@ -773,7 +773,7 @@ export function ChatView({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setResearch(!research)}
+                    disabled={temporaryChat}\n                    onClick={() => setResearch(!research)}
                     aria-pressed={research}
                     className={`gap-1.5 rounded-lg px-2 text-[12px] ${research ? "bg-signal-soft text-ink" : "text-subtle"}`}
                   >
