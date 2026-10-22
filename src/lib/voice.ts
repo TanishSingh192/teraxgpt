@@ -195,16 +195,22 @@ export async function speak(text: string, signal: AbortSignal): Promise<void> {
     const parser = createParser({
       onEvent(event) {
         let payload: { type?: string; audio?: string };
-        try { payload = JSON.parse(event.data) as { type?: string; audio?: string }; }
-        catch { return; }
+        try {
+          payload = JSON.parse(event.data) as { type?: string; audio?: string };
+        } catch {
+          return;
+        }
         if (payload.type === "speech.audio.done") {
           completed = true;
           return;
         }
         if (payload.type !== "speech.audio.delta" || !payload.audio) return;
         let audioBytes: Uint8Array;
-        try { audioBytes = Uint8Array.from(atob(payload.audio), (c) => c.charCodeAt(0)); }
-        catch { return; }
+        try {
+          audioBytes = Uint8Array.from(atob(payload.audio), (c) => c.charCodeAt(0));
+        } catch {
+          return;
+        }
         const decoded = decodePCM(pending, audioBytes);
         pending = new Uint8Array(decoded.pending);
         if (!decoded.samples.length) return;
