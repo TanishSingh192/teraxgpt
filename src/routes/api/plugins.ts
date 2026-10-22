@@ -1,3 +1,4 @@
+import { PUBLIC_SUPABASE_KEY, PUBLIC_SUPABASE_URL } from "@/lib/public-backend";
 import { createClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
@@ -17,8 +18,8 @@ const UpdateSchema = z.object({
 });
 
 function userClient(request: Request) {
-  const url = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
-  const key = process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
+  const url = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"] || PUBLIC_SUPABASE_URL;
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] || PUBLIC_SUPABASE_KEY || process.env["SUPABASE_ANON_KEY"];
   if (!url || !key) throw new Error("Database is not configured.");
   return createClient(url, key, {
     global: { headers: { Authorization: request.headers.get("authorization") ?? "" } },
