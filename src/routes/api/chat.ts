@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { convertToModelMessages, jsonSchema, stepCountIs, streamText, tool, type UIMessage } from "ai";
+import { createUIMessageStream, createUIMessageStreamResponse, convertToModelMessages, jsonSchema, stepCountIs, streamText, tool, type UIMessage } from "ai";
 import { z } from "zod";
 
 import {
@@ -166,6 +166,7 @@ const ChatRequestSchema = z.object({
   agentId: z.string().uuid().nullable().optional(),
   skillId: z.string().uuid().nullable().optional(),
   conversationId: z.string().uuid().nullable().optional(),
+  engine: z.enum(["standard", "agno"]).optional(),
 });
 
 /**
@@ -191,13 +192,7 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = process.env["LOVABLE_API_KEY"];
-        if (!apiKey) {
-          return new Response(JSON.stringify({ error: "AI is not configured." }), {
-            status: 500,
-            headers: { "content-type": "application/json" },
-          });
-        }
+        const apiKey = process.env["LOVABLE_API_KEY"] ?? "";
 
         // Authenticate the caller with their app session.
         const authHeader = request.headers.get("authorization") ?? "";
@@ -272,6 +267,24 @@ export const Route = createFileRoute("/api/chat")({
           return Response.json({ error: "Invalid chat request." }, { status: 400 });
         }
         const body = parsedRequest.data;
+        const engine = body.engine ?? "standard";
+        if (engine === "standard" && !apiKey) {
+          return Response.json({ error: "AI is not configured." }, { status: 500 });
+        }
+        if (engine === "agno") {
+          if (!process.env["AGNO_BASE_URL"] || !process.env["AGNO_API_KEY"]) {
+            return Response.json(
+              { error: "Agno AgentOS is not configured. Set AGNO_BASE_URL and AGNO_API_KEY on the server." },
+              { status: 503 },
+            );
+          }
+          if (body.temporaryChat) {
+            return Response.json(
+              { error: "Agno AgentOS mode currently requires a saved conversation. Start a regular chat to use it." },
+              { status: 400 },
+            );
+          }
+        }
         // The server owns the instructions: callers may only send user/assistant turns.
         const messages = sanitizeMessages(body.messages);
         if (messages.length === 0) {
@@ -495,7 +508,6 @@ export const Route = createFileRoute("/api/chat")({
           });
         }
 
-        const initialRunId = getLovableAiGatewayRunId(request);
         const modelMessages = await convertToModelMessages(messages);
 
         let system = SYSTEM_PROMPT;
@@ -512,6 +524,112 @@ export const Route = createFileRoute("/api/chat")({
           system += `\n\nThe user selected the ${imageEntry.label} image model. Call generate_image for their request.`;
         }
 
+        if (engine === "agno") {
+          const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
+          const latestUserText = latestUserMessage?.parts
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("\n")
+            .trim();
+          const containsAttachment = messages.some((message) =>
+            message.parts.some((part) => part.type === "file" || part.type === "image"),
+          );
+          if (containsAttachment) {
+            return Response.json(
+              { error: "Agno AgentOS mode currently supports text-only prompts. Switch to TeraXGPT to use attachments." },
+              { status: 400 },
+            );
+          }
+          if (!latestUserText) {
+            return Response.json({ error: "Send a text prompt to Agno AgentOS." }, { status: 400 });
+          }
+
+          const baseUrl = process.env["AGNO_BASE_URL"]!.replace(/\/+$/, "");
+          const agentId = process.env["AGNO_AGENT_ID"] || "teraxgpt-assistant";
+          const agentMessage = [
+            "TeraXGPT application context for this turn:",
+            system.slice(0, 16000),
+            "",
+            "Current user request:",
+            latestUserText,
+          ].join("\n");
+          const form = new URLSearchParams({
+            message: agentMessage,
+            user_id: userId,
+            session_id: body.conversationId ?? crypto.randomUUID(),
+            stream: "false",
+          });
+          let agnoResponse: Response;
+          try {
+            agnoResponse = await fetch(
+              \`\${baseUrl}/agents/\${encodeURIComponent(agentId)}/runs\`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: \`Bearer \${process.env["AGNO_API_KEY"]}\`,
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: form,
+                signal: request.signal,
+              },
+            );
+          } catch {
+            return Response.json({ error: "Could not connect to Agno AgentOS." }, { status: 502 });
+          }
+          if (!agnoResponse.ok) {
+            return Response.json(
+              { error: \`Agno AgentOS returned HTTP \${agnoResponse.status}. Check the service URL, API key, and agent ID.\` },
+              { status: 502 },
+            );
+          }
+
+          let run: unknown;
+          try {
+            run = await agnoResponse.json();
+          } catch {
+            return Response.json({ error: "Agno AgentOS returned an invalid response." }, { status: 502 });
+          }
+          const runRecord = run && typeof run === "object" ? (run as Record<string, unknown>) : {};
+          const content =
+            typeof runRecord["content"] === "string"
+              ? runRecord["content"]
+              : typeof runRecord["output"] === "string"
+                ? runRecord["output"]
+                : "";
+          if (!content.trim()) {
+            return Response.json({ error: "Agno AgentOS completed without returning text output." }, { status: 502 });
+          }
+
+          const messageId = crypto.randomUUID();
+          const textId = crypto.randomUUID();
+          const stream = createUIMessageStream({
+            execute: async ({ writer }) => {
+              writer.write({
+                type: "start",
+                messageId,
+                messageMetadata: {
+                  modelId: "agno-agent",
+                  modelLabel: "Agno AgentOS",
+                  provider: "agno",
+                  task: "Agent execution",
+                  reason: "routed to the configured Agno AgentOS service",
+                  ...(agent ? { agentName: agent.name } : {}),
+                },
+              });
+              writer.write({ type: "text-start", id: textId });
+              writer.write({ type: "text-delta", id: textId, delta: content });
+              writer.write({ type: "text-end", id: textId });
+              writer.write({
+                type: "finish",
+                finishReason: "stop",
+                messageMetadata: { inputTokens: 0, outputTokens: 0 },
+              });
+            },
+          });
+          return createUIMessageStreamResponse({ stream });
+        }
+
+        const initialRunId = getLovableAiGatewayRunId(request);
         const hasTools = Object.keys(toolbox).length > 0;
         const shared = {
           system,
