@@ -3,7 +3,7 @@ import { Code2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-function CodeBlock({ language, code, onOpenInIDE }: { language: string; code: string; onOpenInIDE?: (code: string, language: string) => void }) {
+function CodeBlock({ language, code, onOpenInIDE }: { language: string; code: string; onOpenInIDE?: ((code: string, language: string) => void) | undefined }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="my-4 overflow-hidden rounded-xl bg-code-bg ring-1 ring-black/40">
@@ -35,7 +35,7 @@ function CodeBlock({ language, code, onOpenInIDE }: { language: string; code: st
   );
 }
 
-export function Markdown({ children, onOpenInIDE }: { children: string; onOpenInIDE?: (code: string, language: string) => void }) {
+export function Markdown({ children, onOpenInIDE }: { children: string; onOpenInIDE?: ((code: string, language: string) => void) | undefined }) {
   return (
     <div className="text-[14px] leading-relaxed text-ink text-pretty">
       <ReactMarkdown

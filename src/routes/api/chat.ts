@@ -276,17 +276,13 @@ export const Route = createFileRoute("/api/chat")({
           return Response.json({ error: "Invalid chat request." }, { status: 400 });
         }
         const body = parsedRequest.data;
-        const engine = body.engine ?? "standard";
+        // Agno is optional: when its server isn't configured, use the built-in engine.
+        const agnoReady = Boolean(process.env["AGNO_BASE_URL"] && process.env["AGNO_API_KEY"]);
+        const engine = body.engine === "agno" && agnoReady ? "agno" : "standard";
         if (engine === "standard" && !apiKey) {
           return Response.json({ error: "AI is not configured." }, { status: 500 });
         }
         if (engine === "agno") {
-          if (!process.env["AGNO_BASE_URL"] || !process.env["AGNO_API_KEY"]) {
-            return Response.json(
-              { error: "Agno AgentOS is not configured. Set AGNO_BASE_URL and AGNO_API_KEY on the server." },
-              { status: 503 },
-            );
-          }
           if (body.temporaryChat) {
             return Response.json(
               { error: "Agno AgentOS mode currently requires a saved conversation. Start a regular chat to use it." },
