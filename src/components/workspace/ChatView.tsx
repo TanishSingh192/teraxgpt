@@ -5,6 +5,7 @@ import {
   ArrowUp,
   Bot,
   ChevronDown,
+  Download,
   Globe,
   EyeOff,
   Loader2,
@@ -476,6 +477,49 @@ export function ChatView({
 
   const activeModelLabel = modelId === AUTO ? "Auto" : getModel(modelId).label;
 
+  function exportConversation() {
+    const title = initialTitle.trim() || "TeraXGPT conversation";
+    const sections = messages.map((message) => {
+      const role = message.role === "user" ? "You" : "TeraXGPT";
+      const text = textOf(message).trim();
+      const attachments = message.parts
+        .filter((part) => part.type === "file")
+        .map((part) => {
+          const file = part as { filename?: string; mediaType?: string };
+          return `- Attachment: ${file.filename ?? "attachment"}${file.mediaType ? ` (${file.mediaType})` : ""}`;
+        });
+      const trail =
+        message.role === "assistant"
+          ? researchSteps(message).map((step) => `- ${step.kind === "search" ? "Search" : "Source"}: ${step.label}`)
+          : [];
+      return [
+        `## ${role}`,
+        text,
+        attachments.length ? `**Attachments**\\n${attachments.join("\\n")}` : "",
+        trail.length ? `**Research trail**\\n${trail.join("\\n")}` : "",
+      ]
+        .filter(Boolean)
+        .join("\\n\\n");
+    });
+    const markdown = [
+      `# ${title}`,
+      `Exported: ${new Date().toLocaleString()}`,
+      `Engine: ${engine === "agno" ? "Agno AgentOS" : "TeraXGPT"}`,
+      "",
+      ...sections,
+    ].join("\\n\\n---\\n\\n");
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeName = title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\\s+/g, "-").slice(0, 80);
+    link.href = url;
+    link.download = `${safeName || "teraxgpt-conversation"}.md`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
       <main className="relative flex min-w-0 flex-1 flex-col bg-panel">
         <header className="flex h-14 shrink-0 items-center gap-2 px-3 md:px-5">
@@ -530,6 +574,16 @@ export function ChatView({
             </label>
           )}
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={exportConversation}
+              disabled={messages.length === 0 || busy}
+              aria-label="Export conversation as Markdown"
+              title="Export conversation as Markdown"
+            >
+              <Download /> Export
+            </Button>
             <Button variant={temporaryChat ? "secondary" : "ghost"} size="sm" aria-pressed={temporaryChat}
               onClick={() => {
                 if (messages.length > 0 || conversationRef.current !== null) {
