@@ -334,6 +334,13 @@ export const Route = createFileRoute("/api/chat")({
                 ...(!temporaryChat && pluginEnabled("memory") ? (["save_memory"] as ToolId[]) : []),
               ] as ToolId[]),
         );
+        if (!pluginEnabled("web_research")) {
+          granted.delete("web_search");
+          granted.delete("open_source");
+        }
+        if (!pluginEnabled("image_generation")) granted.delete("generate_image");
+        if (!pluginEnabled("memory") || temporaryChat) granted.delete("save_memory");
+
         const approvalNeeded = (id: ToolId) => Boolean(agent?.require_approval) && isWriteTool(id);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
