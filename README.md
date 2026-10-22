@@ -41,7 +41,7 @@ TeraXGPT brings chat, model selection, web research, image generation, saved con
 - Central model registry and deterministic task routing for general chat, coding, reasoning, long-context/file requests, vision, and image generation.
 - Image/file attachments where supported by the configured model and provider.
 - Markdown and code-oriented response rendering.
-- Conversation history, projects, agents, skills, and saved personalization/context.
+- Conversation history, projects, agents, skills, saved personalization/context, and the AI Coworkers task workspace. See [AI Coworkers setup and limits](docs/AI_COWORKERS.md).
 
 ### Research and multimodal tools
 - **Deep Research mode:** research-oriented prompting, web search, source reading, source cross-checking, and citation guidance.
