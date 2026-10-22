@@ -84,7 +84,8 @@ function textOf(message: AppMessage) {
   return message.parts
     .filter((p): p is { type: "text"; text: string } => p.type === "text")
     .map((p) => p.text)
-    .join("\n");
+    .join("
+");
 }
 
 type ResearchStep = { kind: "search" | "read"; label: string; pending: boolean };
@@ -483,7 +484,8 @@ export function ChatView({
             <label className="relative flex items-center">
               <select
                 value={agentId}
-                disabled={temporaryChat}\n                onChange={(event) => setAgentId(event.target.value)}
+                disabled={temporaryChat}
+                onChange={(event) => setAgentId(event.target.value)}
                 aria-label="Agent"
                 className={`appearance-none rounded-lg py-1.5 pl-2.5 pr-7 text-[12px] outline-none hover:bg-background ${agentId ? "bg-signal-soft text-ink" : "bg-transparent text-subtle"}`}
               >
@@ -773,7 +775,9 @@ export function ChatView({
                   <Button
                     variant="ghost"
                     size="sm"
-                    disabled={temporaryChat}\n                    onClick={() => setResearch(!research)}
+                    disabled={temporaryChat}
+                    disabled={temporaryChat}
+                    onClick={() => setResearch(!research)}
                     aria-pressed={research}
                     className={`gap-1.5 rounded-lg px-2 text-[12px] ${research ? "bg-signal-soft text-ink" : "text-subtle"}`}
                   >
