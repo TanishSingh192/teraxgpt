@@ -40,6 +40,15 @@ type Settings = {
 
 type MemoryRow = { id: string; content: string; created_at: string };
 type SkillRow = { id: string; name: string; description: string; instructions: string };
+type ConnectorRow = {
+  id: string;
+  name: string;
+  endpoint: string;
+  enabled: boolean;
+  last_connected_at: string | null;
+  created_at: string;
+};
+type ConnectorTool = { name: string; description?: string };
 type ScheduleRow = {
   id: string;
   title: string;
@@ -52,7 +61,7 @@ type ScheduleRow = {
   last_result: string | null;
 };
 
-const TABS = ["Personalization", "Memory", "Appearance", "Skills", "Scheduled actions"] as const;
+const TABS = ["Personalization", "Memory", "Appearance", "Skills", "Scheduled actions", "Connectors"] as const;
 type Tab = (typeof TABS)[number];
 
 const input =
@@ -83,6 +92,10 @@ function SettingsPage() {
   const [memoryDraft, setMemoryDraft] = useState("");
   const [skills, setSkills] = useState<SkillRow[]>([]);
   const [schedules, setSchedules] = useState<ScheduleRow[]>([]);
+  const [connectors, setConnectors] = useState<ConnectorRow[]>([]);
+  const [connectorDraft, setConnectorDraft] = useState({ name: "", endpoint: "", token: "" });
+  const [connectorTools, setConnectorTools] = useState<Record<string, ConnectorTool[]>>({});
+  const [connectorBusy, setConnectorBusy] = useState(false);
   const [scheduleDraft, setScheduleDraft] = useState({
     title: "",
     prompt: "",
@@ -401,6 +414,90 @@ function SettingsPage() {
                 </div>
               ))}
               {skills.length === 0 && <p className="text-[13px] text-subtle">No skills yet.</p>}
+            </div>
+          )}
+
+          {tab === "Connectors" && (
+            <div className="space-y-3">
+              <div className={card}>
+                <h2 className="text-[15px] font-medium">Model Context Protocol (MCP)</h2>
+                <p className="mt-1 text-[12px] leading-5 text-subtle">
+                  Connect remote MCP servers to expose their tools to your workspace. Use a public HTTPS endpoint.
+                  Credentials are encrypted server-side and are never shown again after saving.
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <span className={label}>Connector name</span>
+                    <input className={input} value={connectorDraft.name}
+                      onChange={(e) => setConnectorDraft({ ...connectorDraft, name: e.target.value })}
+                      placeholder="GitHub, Linear, internal tools…" />
+                  </div>
+                  <div>
+                    <span className={label}>MCP server URL (HTTPS)</span>
+                    <input className={input} value={connectorDraft.endpoint}
+                      onChange={(e) => setConnectorDraft({ ...connectorDraft, endpoint: e.target.value })}
+                      placeholder="https://mcp.example.com/mcp" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className={label}>Bearer token (optional)</span>
+                  <input type="password" autoComplete="new-password" className={input}
+                    value={connectorDraft.token}
+                    onChange={(e) => setConnectorDraft({ ...connectorDraft, token: e.target.value })}
+                    placeholder="Paste token; leave blank for unauthenticated servers" />
+                </div>
+                <Button className="mt-3" disabled={connectorBusy} onClick={() => void addConnector()}>
+                  <Plus /> Add MCP server
+                </Button>
+                <p className="mt-2 text-[11px] text-subtle">
+                  Requires the database migration and CONNECTOR_ENCRYPTION_KEY server secret. Only connect servers you trust.
+                </p>
+              </div>
+              {connectors.map((connector) => (
+                <div key={connector.id} className={card}>
+                  <div className="flex flex-wrap items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[14px] font-medium">{connector.name}</div>
+                      <div className="mt-1 break-all text-[11px] text-subtle">{connector.endpoint}</div>
+                      <div className="mt-1 text-[11px] text-subtle">
+                        {connector.enabled ? "Enabled" : "Disabled"}
+                        {connector.last_connected_at ? ` · last connected ${new Date(connector.last_connected_at).toLocaleString()}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" disabled={connectorBusy}
+                        onClick={() => void inspectConnector(connector)}>Test & list tools</Button>
+                      <Button variant="ghost" size="sm" onClick={async () => {
+                        try {
+                          await connectorRequest("POST", { action: "toggle", id: connector.id, enabled: !connector.enabled });
+                          await loadConnectors();
+                        } catch (error) { toast.error(error instanceof Error ? error.message : "Could not update connector."); }
+                      }}>{connector.enabled ? "Disable" : "Enable"}</Button>
+                      <Button variant="ghost" size="sm" className="text-subtle" onClick={async () => {
+                        try {
+                          await connectorRequest("POST", { action: "delete", id: connector.id });
+                          setConnectors(connectors.filter((item) => item.id !== connector.id));
+                          setConnectorTools((tools) => { const next = { ...tools }; delete next[connector.id]; return next; });
+                        } catch (error) { toast.error(error instanceof Error ? error.message : "Could not remove connector."); }
+                      }}><Trash2 className="size-3.5" /> Remove</Button>
+                    </div>
+                  </div>
+                  {connectorTools[connector.id] && (
+                    <div className="mt-4 border-t border-line pt-3">
+                      <p className="mb-2 text-[12px] font-medium">Available tools ({connectorTools[connector.id]?.length ?? 0})</p>
+                      {(connectorTools[connector.id] ?? []).length === 0
+                        ? <p className="text-[12px] text-subtle">The server did not advertise any tools.</p>
+                        : <div className="space-y-2">{(connectorTools[connector.id] ?? []).map((tool) => (
+                          <div key={tool.name} className="rounded-lg bg-background px-3 py-2">
+                            <div className="text-[12px] font-medium">{tool.name}</div>
+                            {tool.description && <div className="mt-0.5 text-[11px] text-subtle">{tool.description}</div>}
+                          </div>
+                        ))}</div>}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {connectors.length === 0 && <p className="text-[13px] text-subtle">No MCP servers connected yet.</p>}
             </div>
           )}
 
