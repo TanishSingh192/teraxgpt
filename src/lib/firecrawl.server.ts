@@ -37,15 +37,44 @@ async function call(path: string, body: unknown) {
 
 function validatePublicWebUrl(input: string): string {
   let url: URL;
-  try { url = new URL(input); } catch { throw new Error("Enter a valid public webpage URL."); }
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Only HTTP and HTTPS webpages can be opened.");
-  if (url.username || url.password || (url.port && url.port !== "80" && url.port !== "443")) throw new Error("That webpage URL is not allowed.");
-  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  const blocked = !host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") ||
-    host === "metadata.google.internal" || host === "metadata.google" || host === "169.254.169.254" || host === "0.0.0.0" || host === "::" || host === "::1" ||
-    /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(":");
-  if (blocked) throw new Error("Private, local, and IP-literal URLs cannot be opened.");
+  try {
+    url = new URL(input);
+  } catch {
+    throw new Error("Enter a valid public webpage URL.");
+  }
+
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new Error("Only HTTP and HTTPS webpages can be opened.");
+  }
+  if (url.username || url.password || (url.port && url.port !== "80" && url.port !== "443")) {
+    throw new Error("That webpage URL is not allowed.");
+  }
+
+  const host = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+  const blocked =
+    !host ||
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal") ||
+    host === "metadata.google.internal" ||
+    host === "metadata.google" ||
+    host === "169.254.169.254" ||
+    host === "0.0.0.0" ||
+    host === "::" ||
+    host === "::1" ||
+    /^127\\./.test(host) ||
+    /^10\\./.test(host) ||
+    /^192\\.168\\./.test(host) ||
+    /^169\\.254\\./.test(host) ||
+    /^172\\.(1[6-9]|2\\d|3[01])\\./.test(host) ||
+    /^\\d{1,3}(\\.\\d{1,3}){3}$/.test(host) ||
+    host.includes(":");
+
+  if (blocked) {
+    throw new Error("Private, local, and IP-literal URLs cannot be opened.");
+  }
+
   url.hash = "";
   return url.toString();
 }
@@ -53,7 +82,9 @@ export type SearchHit = { url: string; title: string; snippet: string };
 
 export async function webSearch(query: string, limit = 5): Promise<SearchHit[]> {
   const normalizedQuery = query.trim();
-  if (!normalizedQuery || normalizedQuery.length > 500) throw new Error("Search queries must contain 1–500 characters.");
+  if (!normalizedQuery || normalizedQuery.length > 500) {
+    throw new Error("Search queries must contain 1–500 characters.");
+  }
   const safeLimit = Math.max(1, Math.min(10, Math.floor(limit)));
   const result = await call("/search", { query: normalizedQuery, limit: safeLimit });
   const rows = (result["data"] as unknown) ?? [];
@@ -76,7 +107,11 @@ export type PageContent = { url: string; title: string; text: string };
 
 export async function openPage(url: string, maxChars = 12_000): Promise<PageContent> {
   const safeUrl = validatePublicWebUrl(url);
-  const result = await call("/scrape", { url: safeUrl, formats: ["markdown"], onlyMainContent: true });
+  const result = await call("/scrape", {
+    url: safeUrl,
+    formats: ["markdown"],
+    onlyMainContent: true,
+  });
   const data = (result["data"] as Record<string, unknown> | undefined) ?? result;
   const metadata = (data["metadata"] as Record<string, unknown> | undefined) ?? {};
   const markdown = String(data["markdown"] ?? "");
