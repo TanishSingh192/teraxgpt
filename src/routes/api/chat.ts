@@ -562,11 +562,11 @@ export const Route = createFileRoute("/api/chat")({
           let agnoResponse: Response;
           try {
             agnoResponse = await fetch(
-              \`\${baseUrl}/agents/\${encodeURIComponent(agentId)}/runs\`,
+              `${baseUrl}/agents/${encodeURIComponent(agentId)}/runs`,
               {
                 method: "POST",
                 headers: {
-                  Authorization: \`Bearer \${process.env["AGNO_API_KEY"]}\`,
+                  Authorization: `Bearer ${process.env["AGNO_API_KEY"]}`,
                   "Content-Type": "application/x-www-form-urlencoded",
                 },
                 body: form,
@@ -578,7 +578,7 @@ export const Route = createFileRoute("/api/chat")({
           }
           if (!agnoResponse.ok) {
             return Response.json(
-              { error: \`Agno AgentOS returned HTTP \${agnoResponse.status}. Check the service URL, API key, and agent ID.\` },
+              { error: `Agno AgentOS returned HTTP ${agnoResponse.status}. Check the service URL, API key, and agent ID.` },
               { status: 502 },
             );
           }
