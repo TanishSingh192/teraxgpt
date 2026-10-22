@@ -49,6 +49,7 @@ type ConnectorRow = {
   created_at: string;
 };
 type ConnectorTool = { name: string; description?: string };
+type PluginRow = { id: string; name: string; description: string; category: string; enabled: boolean };
 type ScheduleRow = {
   id: string;
   title: string;
@@ -61,7 +62,7 @@ type ScheduleRow = {
   last_result: string | null;
 };
 
-const TABS = ["Personalization", "Memory", "Appearance", "Skills", "Scheduled actions", "Connectors"] as const;
+const TABS = ["Personalization", "Memory", "Appearance", "Skills", "Scheduled actions", "Connectors", "Plugins"] as const;
 type Tab = (typeof TABS)[number];
 
 const input =
@@ -93,6 +94,7 @@ function SettingsPage() {
   const [skills, setSkills] = useState<SkillRow[]>([]);
   const [schedules, setSchedules] = useState<ScheduleRow[]>([]);
   const [connectors, setConnectors] = useState<ConnectorRow[]>([]);
+  const [plugins, setPlugins] = useState<PluginRow[]>([]);
   const [connectorDraft, setConnectorDraft] = useState({ name: "", endpoint: "", token: "" });
   const [connectorTools, setConnectorTools] = useState<Record<string, ConnectorTool[]>>({});
   const [connectorBusy, setConnectorBusy] = useState(false);
@@ -146,6 +148,39 @@ function SettingsPage() {
     return result;
   }, []);
 
+  const loadPlugins = useCallback(async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      const response = await fetch("/api/plugins", { headers: { Authorization: `Bearer ${token}` } });
+      const result = await response.json().catch(() => ({})) as { error?: string; plugins?: PluginRow[] };
+      if (!response.ok) throw new Error(result.error ?? "Could not load plugins.");
+      setPlugins(result.plugins ?? []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load plugins.");
+    }
+  }, []);
+
+  async function togglePlugin(plugin: PluginRow) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error("Sign in again to manage plugins.");
+      const response = await fetch("/api/plugins", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ pluginId: plugin.id, enabled: !plugin.enabled }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? "Could not update plugin.");
+      setPlugins((current) => current.map((item) => item.id === plugin.id ? { ...item, enabled: !item.enabled } : item));
+      toast.success(`${plugin.name} ${plugin.enabled ? "disabled" : "enabled"}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update plugin.");
+    }
+  }
+
   const loadConnectors = useCallback(async () => {
     try {
       const result = await connectorRequest("GET");
@@ -192,8 +227,8 @@ function SettingsPage() {
   }
 
   useEffect(() => {
-    if (user) { void refresh(); void loadConnectors(); }
-  }, [user, refresh, loadConnectors]);
+    if (user) { void refresh(); void loadConnectors(); void loadPlugins(); }
+  }, [user, refresh, loadConnectors, loadPlugins]);
 
   async function saveSettings(next: Settings) {
     setSettings(next);
@@ -562,6 +597,39 @@ function SettingsPage() {
                 </div>
               ))}
               {connectors.length === 0 && <p className="text-[13px] text-subtle">No MCP servers connected yet.</p>}
+            </div>
+          )}
+
+          {tab === "Plugins" && (
+            <div className="space-y-3">
+              <div className={card}>
+                <h2 className="text-[15px] font-medium">Plugin library</h2>
+                <p className="mt-1 text-[12px] leading-5 text-subtle">
+                  Control which built-in capabilities and external integrations TeraXGPT may use in chat. Disabled plugins are not offered to the assistant.
+                </p>
+              </div>
+              {plugins.map((plugin) => (
+                <div key={plugin.id} className={card}>
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-[14px] font-medium">{plugin.name}</h3>
+                        <span className="rounded-md bg-background px-2 py-0.5 text-[10px] text-subtle">{plugin.category}</span>
+                      </div>
+                      <p className="mt-1 text-[12px] leading-5 text-subtle">{plugin.description}</p>
+                    </div>
+                    <Button variant={plugin.enabled ? "secondary" : "outline"} size="sm"
+                      onClick={() => void togglePlugin(plugin)}>
+                      {plugin.enabled ? "Enabled" : "Enable"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <div className={card}>
+                <p className="text-[12px] text-subtle">
+                  Need another service? Add an MCP-compatible server in <button className="underline underline-offset-2" onClick={() => setTab("Connectors")}>Connectors</button>. OAuth-based marketplace apps are not supported yet.
+                </p>
+              </div>
             </div>
           )}
 
