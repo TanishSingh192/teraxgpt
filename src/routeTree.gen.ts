@@ -16,6 +16,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiConnectorsRouteImport } from './routes/api/connectors'
 import { Route as ApiPluginsRouteImport } from './routes/api/plugins'
+import { Route as ApiRealtimeSessionRouteImport } from './routes/api/realtime-session'
 import { Route as ApiSpeakRouteImport } from './routes/api/speak'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
@@ -57,6 +58,11 @@ const ApiPluginsRoute = ApiPluginsRouteImport.update({
   path: '/api/plugins',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRealtimeSessionRoute = ApiRealtimeSessionRouteImport.update({
+  id: '/api/realtime-session',
+  path: '/api/realtime-session',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSpeakRoute = ApiSpeakRouteImport.update({
   id: '/api/speak',
   path: '/api/speak',
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/plugins': typeof ApiPluginsRoute
+  '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/plugins': typeof ApiPluginsRoute
+  '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/plugins': typeof ApiPluginsRoute
+  '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/connectors'
     | '/api/plugins'
+    | '/api/realtime-session'
     | '/api/speak'
     | '/api/transcribe'
     | '/projects/$projectId'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/connectors'
     | '/api/plugins'
+    | '/api/realtime-session'
     | '/api/speak'
     | '/api/transcribe'
     | '/projects/$projectId'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/connectors'
     | '/api/plugins'
+    | '/api/realtime-session'
     | '/api/speak'
     | '/api/transcribe'
     | '/projects/$projectId'
@@ -179,6 +191,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiConnectorsRoute: typeof ApiConnectorsRoute
   ApiPluginsRoute: typeof ApiPluginsRoute
+  ApiRealtimeSessionRoute: typeof ApiRealtimeSessionRoute
   ApiSpeakRoute: typeof ApiSpeakRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
@@ -237,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPluginsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/realtime-session': {
+      id: '/api/realtime-session'
+      path: '/api/realtime-session'
+      fullPath: '/api/realtime-session'
+      preLoaderRoute: typeof ApiRealtimeSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/speak': {
       id: '/api/speak'
       path: '/api/speak'
@@ -283,6 +303,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiConnectorsRoute: ApiConnectorsRoute,
   ApiPluginsRoute: ApiPluginsRoute,
+  ApiRealtimeSessionRoute: ApiRealtimeSessionRoute,
   ApiSpeakRoute: ApiSpeakRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
