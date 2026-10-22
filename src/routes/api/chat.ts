@@ -193,7 +193,7 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = process.env["LOVABLE_API_KEY"];
+        const apiKey = process.env["LOVABLE_API_KEY"] ?? "";
 
         // Authenticate the caller with their app session.
         const authHeader = request.headers.get("authorization") ?? "";
