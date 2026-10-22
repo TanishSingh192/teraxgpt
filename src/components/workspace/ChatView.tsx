@@ -170,6 +170,7 @@ export function ChatView({
   projectName?: string;
 }) {
   const [modelId, setModelId] = useState<string>(AUTO);
+  const [engine, setEngine] = useState<"standard" | "agno">("standard");
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [turn, setTurn] = useState<TurnInfo | null>(null);
@@ -189,6 +190,8 @@ export function ChatView({
 
   const modelRef = useRef(modelId);
   modelRef.current = modelId;
+  const engineRef = useRef(engine);
+  engineRef.current = engine;
   const researchRef = useRef(research);
   researchRef.current = research;
   const projectRef = useRef(projectId);
@@ -255,6 +258,7 @@ export function ChatView({
             body: {
               messages,
               modelId: modelRef.current,
+              engine: engineRef.current,
               research: researchRef.current,
               temporaryChat: temporaryChatRef.current,
               projectId: projectRef.current,
@@ -301,8 +305,10 @@ export function ChatView({
             }
           });
       }
+      const isAgno = meta.provider === "agno";
       const model = getModel(meta.modelId ?? MODELS[0]!.id);
-      const cost = estimateCost(model, meta.inputTokens ?? 0, meta.outputTokens ?? 0);
+      // AgentOS usage is provider-managed; avoid estimating it with a different model's pricing.
+      const cost = isAgno ? 0 : estimateCost(model, meta.inputTokens ?? 0, meta.outputTokens ?? 0);
       setTurn({ ...meta, cost });
 
       const convId = conversationRef.current;
@@ -313,8 +319,8 @@ export function ChatView({
           await supabase.from("usage_records").insert({
             user_id: userId,
             conversation_id: null,
-            provider: model.provider,
-            model: model.id,
+            provider: isAgno ? "agno" : model.provider,
+            model: isAgno ? "agno-agent" : model.id,
             input_tokens: meta.inputTokens ?? 0,
             output_tokens: meta.outputTokens ?? 0,
             estimated_cost: cost,
@@ -342,8 +348,8 @@ export function ChatView({
       await supabase.from("usage_records").insert({
         user_id: userId,
         conversation_id: convId,
-        provider: model.provider,
-        model: model.id,
+        provider: isAgno ? "agno" : model.provider,
+        model: isAgno ? "agno-agent" : model.id,
         input_tokens: meta.inputTokens ?? 0,
         output_tokens: meta.outputTokens ?? 0,
         estimated_cost: cost,
@@ -407,6 +413,14 @@ export function ChatView({
   async function handleSend() {
     const text = input.trim();
     if ((!text && files.length === 0) || busy) return;
+    if (engineRef.current === "agno" && temporaryChatRef.current) {
+      toast.error("Agno AgentOS mode requires a saved conversation. Turn off Temporary Chat or switch to TeraXGPT.");
+      return;
+    }
+    if (engineRef.current === "agno" && files.length > 0) {
+      toast.error("Agno AgentOS mode currently supports text-only prompts. Switch to TeraXGPT to use attachments.");
+      return;
+    }
     interruptSpeech();
 
     const { data: auth } = await supabase.auth.getUser();
@@ -467,8 +481,25 @@ export function ChatView({
         <header className="flex h-14 shrink-0 items-center gap-2 px-3 md:px-5">
           <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="md:hidden" aria-label="Open sidebar"><Menu /></Button>
           <label className="relative flex items-center">
-            <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 font-display text-[15px] font-semibold outline-none hover:bg-background">
-              <option value={AUTO}>TeraX CPT Auto</option>
+            <select
+              value={engine}
+              onChange={(event) => {
+                const next = event.target.value as "standard" | "agno";
+                setEngine(next);
+                if (next === "agno") setModelId(AUTO);
+              }}
+              disabled={messages.length > 0 || conversationRef.current !== null}
+              aria-label="AI engine"
+              className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 text-[12px] font-medium outline-none hover:bg-background disabled:opacity-60"
+            >
+              <option value="standard">TeraXGPT</option>
+              <option value="agno">Agno AgentOS</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
+          </label>
+          <label className="relative flex items-center">
+            <select value={modelId} disabled={engine === "agno"} onChange={(event) => setModelId(event.target.value)} className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 font-display text-[15px] font-semibold outline-none hover:bg-background disabled:opacity-50">
+              <option value={AUTO}>Auto</option>
               {MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />

@@ -1,0 +1,3 @@
+agno[os,mcp]
+openai
+ddgs
