@@ -8,6 +8,7 @@ This document distinguishes shipped foundations from future work. TeraXGPT is no
 - **Deep Research:** opt into a research-oriented system prompt and web search/open-source tools. The prompt requires source opening, cross-checking, inline citations, and a sources section. Quality depends on the configured web-search provider and model.
 - **Plugin library:** users can enable or disable built-in web research, image generation, saved memory, and MCP connector capabilities from Settings → Plugins.
 - **MCP connectors:** configure remote HTTPS MCP servers in Settings → Connectors. Credentials use server-side encryption; discovered tool calls require approval.
+- **AI coworkers MVP:** the chat workspace includes a specialist task panel with General, Research, Writing, and Coding profiles; queued runs, persistent status/events, result history, and cancellation. Apply `supabase/migrations/202610220001_coworker_runs.sql` and configure the scheduled worker as documented in [AI Coworkers](AI_COWORKERS.md). The Research profile uses the configured web search/page-reader tools; other profiles are text-only.
 
 ## Deployment
 
