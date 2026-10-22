@@ -6,6 +6,7 @@ import {
   Bot,
   ChevronDown,
   Globe,
+  EyeOff,
   Loader2,
   Menu,
   Mic,
@@ -173,6 +174,7 @@ export function ChatView({
   const [files, setFiles] = useState<File[]>([]);
   const [turn, setTurn] = useState<TurnInfo | null>(null);
   const [research, setResearch] = useState(false);
+  const [temporaryChat, setTemporaryChat] = useState(false);
   const [voiceReplies, setVoiceReplies] = useState(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
@@ -252,6 +254,7 @@ export function ChatView({
               messages,
               modelId: modelRef.current,
               research: researchRef.current,
+              temporaryChat,
               projectId: projectRef.current,
               agentId: agentRef.current || null,
               skillId: skillRef.current || null,
@@ -301,6 +304,23 @@ export function ChatView({
       setTurn({ ...meta, cost });
 
       const convId = conversationRef.current;
+      if (temporaryChat) {
+        const { data: auth } = await supabase.auth.getUser();
+        const userId = auth.user?.id;
+        if (userId) {
+          await supabase.from("usage_records").insert({
+            user_id: userId,
+            conversation_id: null,
+            provider: model.provider,
+            model: model.id,
+            input_tokens: meta.inputTokens ?? 0,
+            output_tokens: meta.outputTokens ?? 0,
+            estimated_cost: cost,
+          });
+          onUsage(cost);
+        }
+        return;
+      }
       const { data: auth } = await supabase.auth.getUser();
       const userId = auth.user?.id;
       if (!convId || !userId) return;
@@ -391,6 +411,16 @@ export function ChatView({
     const userId = auth.user?.id;
     if (!userId) return;
 
+    if (temporaryChat) {
+      conversationRef.current = null;
+      const dataTransfer = new DataTransfer();
+      files.forEach((file) => dataTransfer.items.add(file));
+      void sendMessage(files.length ? { text, files: dataTransfer.files } : { text });
+      setInput("");
+      setFiles([]);
+      return;
+    }
+
     let convId = conversationRef.current;
     const title = text.slice(0, 60) || "File analysis";
     if (!convId) {
@@ -441,7 +471,8 @@ export function ChatView({
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
           </label>
-          {projectName && (
+          {temporaryChat && <span className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700">Temporary · not saved</span>}
+          {projectName && !temporaryChat && (
             <span className="truncate rounded-lg bg-background px-2.5 py-1 text-[12px] text-subtle">
               {projectName}
             </span>
@@ -450,7 +481,7 @@ export function ChatView({
             <label className="relative flex items-center">
               <select
                 value={agentId}
-                onChange={(event) => setAgentId(event.target.value)}
+                disabled={temporaryChat}\n                onChange={(event) => setAgentId(event.target.value)}
                 aria-label="Agent"
                 className={`appearance-none rounded-lg py-1.5 pl-2.5 pr-7 text-[12px] outline-none hover:bg-background ${agentId ? "bg-signal-soft text-ink" : "bg-transparent text-subtle"}`}
               >
@@ -465,6 +496,19 @@ export function ChatView({
             </label>
           )}
           <div className="ml-auto flex items-center gap-2">
+            <Button variant={temporaryChat ? "secondary" : "ghost"} size="sm" aria-pressed={temporaryChat}
+              onClick={() => {
+                if (!temporaryChat && messages.length > 0) {
+                  toast.error("Start a new chat before switching to Temporary Chat.");
+                  return;
+                }
+                setTemporaryChat((current) => !current);
+                setAgentId("");
+                setSkillId("");
+                if (!temporaryChat) setResearch(false);
+              }}>
+              <EyeOff /> {temporaryChat ? "Temporary on" : "Temporary chat"}
+            </Button>
             <Button
               variant="ghost"
               size="sm"
