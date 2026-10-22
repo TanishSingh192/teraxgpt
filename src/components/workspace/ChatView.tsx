@@ -305,8 +305,10 @@ export function ChatView({
             }
           });
       }
+      const isHermes = meta.provider === "hermes";
       const model = getModel(meta.modelId ?? MODELS[0]!.id);
-      const cost = estimateCost(model, meta.inputTokens ?? 0, meta.outputTokens ?? 0);
+      // Hermes usage/pricing is provider-managed; do not estimate it with a different model's rates.
+      const cost = isHermes ? 0 : estimateCost(model, meta.inputTokens ?? 0, meta.outputTokens ?? 0);
       setTurn({ ...meta, cost });
 
       const convId = conversationRef.current;
@@ -317,8 +319,8 @@ export function ChatView({
           await supabase.from("usage_records").insert({
             user_id: userId,
             conversation_id: null,
-            provider: model.provider,
-            model: model.id,
+            provider: isHermes ? "hermes" : model.provider,
+            model: isHermes ? "hermes-agent" : model.id,
             input_tokens: meta.inputTokens ?? 0,
             output_tokens: meta.outputTokens ?? 0,
             estimated_cost: cost,
