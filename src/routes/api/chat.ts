@@ -313,14 +313,21 @@ export const Route = createFileRoute("/api/chat")({
         const imageEntry = decision.model;
         const model: ModelEntry = imageMode ? getModel(IMAGE_DRIVER_ID) : decision.model;
 
+        const { data: pluginRows } = await supabase
+          .from("user_plugin_settings")
+          .select("plugin_id,enabled")
+          .eq("user_id", userId);
+        const pluginEnabled = (pluginId: string) =>
+          (pluginRows ?? []).find((row) => row.plugin_id === pluginId)?.enabled ?? true;
+
         // Permissions: an agent may only use the tools it was granted.
         const granted = new Set<ToolId>(
           agent
             ? ((Array.isArray(agent.tools) ? agent.tools : DEFAULT_AGENT_TOOLS) as ToolId[])
             : ([
-                ...(research ? (["web_search", "open_source"] as ToolId[]) : []),
-                "generate_image",
-                ...(!temporaryChat ? (["save_memory"] as ToolId[]) : []),
+                ...(research && pluginEnabled("web_research") ? (["web_search", "open_source"] as ToolId[]) : []),
+                ...(pluginEnabled("image_generation") ? (["generate_image"] as ToolId[]) : []),
+                ...(!temporaryChat && pluginEnabled("memory") ? (["save_memory"] as ToolId[]) : []),
               ] as ToolId[]),
         );
         const approvalNeeded = (id: ToolId) => Boolean(agent?.require_approval) && isWriteTool(id);
@@ -402,7 +409,7 @@ export const Route = createFileRoute("/api/chat")({
           });
         }
 
-        if (!agent) {
+        if (!agent && pluginEnabled("mcp_connectors")) {
           // Discover a small set of enabled connectors concurrently to avoid serial latency.
           const { data: mcpConnectors } = await supabase
             .from("user_mcp_connectors")
