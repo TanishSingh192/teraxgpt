@@ -12,6 +12,7 @@ import {
   EyeOff,
   Loader2,
   Menu,
+  MoreHorizontal,
   Mic,
   Paperclip,
   Plus,
@@ -230,6 +231,9 @@ export function ChatView({
   const [selectedDocumentMessages, setSelectedDocumentMessages] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+  const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
+  const toolbarMenuRef = useRef<HTMLDivElement>(null);
   const [turn, setTurn] = useState<TurnInfo | null>(null);
   const [research, setResearch] = useState(false);
   const [temporaryChat, setTemporaryChat] = useState(false);
@@ -272,6 +276,38 @@ export function ChatView({
     speechRef.current = null;
     setSpeaking(false);
   }
+
+  useEffect(() => {
+    if (!addMenuOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!addMenuRef.current?.contains(event.target as Node)) setAddMenuOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAddMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [addMenuOpen]);
+
+  useEffect(() => {
+    if (!toolbarMenuOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!toolbarMenuRef.current?.contains(event.target as Node)) setToolbarMenuOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setToolbarMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [toolbarMenuOpen]);
 
   useEffect(() => {
     conversationRef.current = conversationId;
@@ -619,124 +655,74 @@ export function ChatView({
 
   return (
       <main className="relative flex min-w-0 flex-1 flex-col bg-panel">
-        <header className="flex h-14 shrink-0 items-center gap-2 px-3 md:px-5">
-          <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="md:hidden" aria-label="Open sidebar"><Menu /></Button>
-          <label className="relative flex items-center">
-            <select
-              value={engine}
-              onChange={(event) => {
-                const next = event.target.value as "standard" | "agno";
-                setEngine(next);
-                if (next === "agno") setModelId(AUTO);
-              }}
-              disabled={messages.length > 0 || conversationRef.current !== null}
-              aria-label="AI engine"
-              className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 text-[12px] font-medium outline-none hover:bg-background disabled:opacity-60"
-            >
-              <option value="standard">TeraXGPT</option>
-              <option value="agno">Agno AgentOS</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
-          </label>
-          <label className="relative flex items-center">
-            <select value={modelId} disabled={engine === "agno"} onChange={(event) => setModelId(event.target.value)} className="appearance-none rounded-lg bg-transparent py-2 pl-2 pr-7 font-display text-[15px] font-semibold outline-none hover:bg-background disabled:opacity-50">
-              <option value={AUTO}>Auto</option>
-              {MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
-          </label>
-          {temporaryChat && <span className="rounded-lg bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700">Temporary · not saved</span>}
-          {projectName && !temporaryChat && (
-            <span className="truncate rounded-lg bg-background px-2.5 py-1 text-[12px] text-subtle">
-              {projectName}
-            </span>
-          )}
-          {agents.length > 0 && !temporaryChat && (
-            <label className="relative flex items-center">
+        <header className="relative z-20 flex min-h-14 shrink-0 items-center gap-2 border-b border-line/60 px-2.5 sm:px-4 md:px-5">
+          <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="shrink-0 md:hidden" aria-label="Open sidebar"><Menu /></Button>
+          <div className="flex min-w-0 items-center gap-1 sm:gap-2">
+            <label className="relative flex min-w-0 items-center">
               <select
-                value={agentId}
-                disabled={temporaryChat}
-                onChange={(event) => setAgentId(event.target.value)}
-                aria-label="Agent"
-                className={`appearance-none rounded-lg py-1.5 pl-2.5 pr-7 text-[12px] outline-none hover:bg-background ${agentId ? "bg-signal-soft text-ink" : "bg-transparent text-subtle"}`}
+                value={engine}
+                onChange={(event) => {
+                  const next = event.target.value as "standard" | "agno";
+                  setEngine(next);
+                  if (next === "agno") setModelId(AUTO);
+                }}
+                disabled={messages.length > 0 || conversationRef.current !== null}
+                aria-label="AI engine"
+                className="max-w-[116px] appearance-none rounded-lg bg-transparent py-2 pl-2 pr-6 text-[12px] font-medium outline-none hover:bg-background disabled:opacity-60 sm:max-w-none sm:pr-7"
               >
+                <option value="standard">TeraXGPT</option>
+                <option value="agno">Agno AgentOS</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-1.5 size-3.5 text-subtle sm:right-2" />
+            </label>
+            <label className="relative hidden items-center sm:flex">
+              <select value={modelId} disabled={engine === "agno"} onChange={(event) => setModelId(event.target.value)} aria-label="AI model" className="max-w-[130px] appearance-none rounded-lg bg-transparent py-2 pl-2 pr-6 font-display text-[13px] font-semibold outline-none hover:bg-background disabled:opacity-50 sm:max-w-none sm:pr-7 sm:text-[15px]">
+                <option value={AUTO}>Auto</option>
+                {MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-1.5 size-3.5 text-subtle sm:right-2" />
+            </label>
+          </div>
+          {temporaryChat && <span className="hidden rounded-lg bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 sm:inline-flex">Temporary · not saved</span>}
+          {projectName && !temporaryChat && <span className="hidden max-w-36 truncate rounded-lg bg-background px-2.5 py-1 text-[12px] text-subtle lg:inline-flex">{projectName}</span>}
+          {agents.length > 0 && !temporaryChat && (
+            <label className="relative hidden items-center lg:flex">
+              <select value={agentId} disabled={temporaryChat} onChange={(event) => setAgentId(event.target.value)} aria-label="Agent" className={`max-w-36 appearance-none rounded-lg py-1.5 pl-2.5 pr-7 text-[12px] outline-none hover:bg-background ${agentId ? "bg-signal-soft text-ink" : "bg-transparent text-subtle"}`}>
                 <option value="">No agent</option>
-                {agents.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
+                {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
               <ChevronDown className="pointer-events-none absolute right-2 size-3.5 text-subtle" />
             </label>
           )}
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={openDocumentStudio} disabled={assistantMessages.length === 0 || busy} aria-label="Open Document Studio"><FileText /> Document Studio</Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={exportConversation}
-              disabled={messages.length === 0 || busy}
-              aria-label="Export conversation as Markdown"
-              title="Export conversation as Markdown"
-            >
-              <Download /> Export
-            </Button>
-            <Button variant={temporaryChat ? "secondary" : "ghost"} size="sm" aria-pressed={temporaryChat}
-              onClick={() => {
-                if (messages.length > 0 || conversationRef.current !== null) {
-                  toast.error("Start a new chat before changing Temporary Chat mode.");
-                  return;
-                }
-                setTemporaryChat((current) => !current);
-                setAgentId("");
-                setSkillId("");
-                if (!temporaryChat) setResearch(false);
-              }}>
-              <EyeOff /> {temporaryChat ? "Temporary on" : "Temporary chat"}
-            </Button>
-            <Button
-              variant={liveVoiceMode ? "secondary" : "ghost"}
-              size="sm"
-              aria-pressed={liveVoiceMode}
-              title="Enable voice-first conversation with spoken replies"
-              onClick={() => {
-                const next = !liveVoiceMode;
-                setLiveVoiceMode(next);
-                setVoiceReplies(next);
-                if (!next) interruptSpeech();
-              }}
-            >
-              <Mic /> {liveVoiceMode ? "Live voice on" : "Live voice"}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => { interruptSpeech(); setRealtimeVoiceOpen(true); }} title="Start low-latency, hands-free realtime voice conversation">
-              <Volume2 /> Realtime voice
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (voiceReplies) interruptSpeech();
-                setVoiceReplies(!voiceReplies);
-              }}
-              aria-pressed={voiceReplies}
-              className={voiceReplies ? "text-ink" : "text-subtle"}
-            >
-              {voiceReplies ? <Volume2 /> : <VolumeX />}
-              {voiceReplies ? "Voice on" : "Voice off"}
-            </Button>
-            {speaking && (
-              <Button variant="ghost" size="sm" onClick={interruptSpeech}>
-                <Square /> Interrupt
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            <Button variant="secondary" size="sm" onClick={openDocumentStudio} disabled={assistantMessages.length === 0 || busy} aria-label="Open Document Studio" className="hidden md:inline-flex"><FileText /><span className="hidden lg:inline">Document Studio</span></Button>
+            <Button variant="ghost" size="sm" onClick={exportConversation} disabled={messages.length === 0 || busy} aria-label="Export conversation as Markdown" title="Export conversation as Markdown" className="hidden sm:inline-flex"><Download /><span className="hidden lg:inline">Export</span></Button>
+            <div className="relative" ref={toolbarMenuRef}>
+              <Button variant={toolbarMenuOpen ? "secondary" : "ghost"} size="icon" onClick={() => setToolbarMenuOpen((open) => !open)} aria-label="More workspace actions" aria-expanded={toolbarMenuOpen} aria-haspopup="menu" title="Workspace actions">
+                <MoreHorizontal />
               </Button>
-            )}
-            {busy ? (
-              <Button variant="ghost" size="sm" onClick={() => stop()}><Square /> Stop</Button>
-            ) : (
-              messages.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => void regenerate()}><RotateCcw /> Regenerate</Button>
-              )
-            )}
+              {toolbarMenuOpen && (
+                <div role="menu" aria-label="Workspace actions" className="absolute right-0 top-11 z-50 max-h-[min(75vh,520px)] w-[min(88vw,280px)] overflow-y-auto rounded-xl border border-line bg-panel p-1.5 shadow-xl">
+                  <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-subtle">Workspace</div>
+                  <label className="flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[13px] sm:hidden"><span>Model</span><select value={modelId} disabled={engine === "agno"} onChange={(event) => { setModelId(event.target.value); setToolbarMenuOpen(false); }} aria-label="AI model" className="max-w-36 rounded-md border border-line bg-background px-2 py-1.5 text-[12px] outline-none disabled:opacity-50"><option value={AUTO}>Auto</option>{MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}</select></label>
+                  <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); void openDocumentStudio(); }} disabled={assistantMessages.length === 0 || busy} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background disabled:opacity-40 md:hidden"><FileText className="size-4 text-subtle" />Document Studio</button>
+                  <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); exportConversation(); }} disabled={messages.length === 0 || busy} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background disabled:opacity-40 sm:hidden"><Download className="size-4 text-subtle" />Export conversation</button>
+                  <button role="menuitem" type="button" onClick={() => {
+                    setToolbarMenuOpen(false);
+                    if (messages.length > 0 || conversationRef.current !== null) { toast.error("Start a new chat before changing Temporary Chat mode."); return; }
+                    setTemporaryChat((current) => !current); setAgentId(""); setSkillId(""); if (!temporaryChat) setResearch(false);
+                  }} className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><span>Temporary chat</span><span className="text-[11px] text-subtle">{temporaryChat ? "On" : "Off"}</span></button>
+                  <div className="my-1 border-t border-line" />
+                  <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-subtle">Voice</div>
+                  <button role="menuitemcheckbox" aria-checked={liveVoiceMode} type="button" onClick={() => { const next = !liveVoiceMode; setLiveVoiceMode(next); setVoiceReplies(next); if (!next) interruptSpeech(); setToolbarMenuOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><span>Voice replies</span><span className="text-[11px] text-subtle">{liveVoiceMode ? "On" : "Off"}</span></button>
+                  <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); interruptSpeech(); setRealtimeVoiceOpen(true); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><Mic className="size-4 text-subtle" />Start Gemini Live</button>
+                  <button role="menuitemcheckbox" aria-checked={voiceReplies} type="button" onClick={() => { if (voiceReplies) interruptSpeech(); setVoiceReplies(!voiceReplies); setToolbarMenuOpen(false); }} className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><span>Spoken answers</span><span className="text-[11px] text-subtle">{voiceReplies ? "On" : "Off"}</span></button>
+                  {speaking && <button role="menuitem" type="button" onClick={() => { interruptSpeech(); setToolbarMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><Square className="size-4 text-subtle" />Interrupt speech</button>}
+                  <div className="my-1 border-t border-line" />
+                  {busy ? <button role="menuitem" type="button" onClick={() => { stop(); setToolbarMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><Square className="size-4 text-subtle" />Stop response</button> : messages.length > 0 && <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); void regenerate(); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><RotateCcw className="size-4 text-subtle" />Regenerate response</button>}
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -982,7 +968,7 @@ export function ChatView({
                       event.target.value = "";
                     }}
                   />
-                  <div className="relative">
+                  <div className="relative" ref={addMenuRef}>
                     <Button
                       variant="ghost" size="icon"
                       onClick={() => setAddMenuOpen((open) => !open)}
