@@ -1015,7 +1015,7 @@ export function ChatView({
           </div>
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-panel via-panel to-transparent px-4 pb-3 pt-8 md:px-8">
+        <div id="terax-composer" className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-panel via-panel to-transparent px-4 pb-3 pt-8 md:px-8">
           <div className="pointer-events-auto mx-auto max-w-[760px]">
             <div className="composer-shell rounded-2xl border border-line bg-panel p-2">
               {files.length > 0 && (
