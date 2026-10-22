@@ -23,8 +23,11 @@ export const Route = createFileRoute("/api/transcribe")({
         }
 
         let incoming: FormData;
-        try { incoming = await request.formData(); }
-        catch { return Response.json({ error: "Invalid audio upload." }, { status: 400 }); }
+        try {
+          incoming = await request.formData();
+        } catch {
+          return Response.json({ error: "Invalid audio upload." }, { status: 400 });
+        }
         const file = incoming.get("file");
         if (!(file instanceof File) || !file.size || file.size > MAX_BYTES) {
           return Response.json({ error: "No usable audio was recorded." }, { status: 400 });
@@ -47,9 +50,14 @@ export const Route = createFileRoute("/api/transcribe")({
             signal: request.signal,
           });
         } catch (error) {
-          if ((error as Error)?.name === "AbortError") return new Response(null, { status: 499 });
+          if ((error as Error)?.name === "AbortError") {
+            return new Response(null, { status: 499 });
+          }
           console.error("Audio transcription provider request failed.");
-          return Response.json({ error: "Transcription service is temporarily unavailable." }, { status: 502 });
+          return Response.json(
+            { error: "Transcription service is temporarily unavailable." },
+            { status: 502 },
+          );
         }
 
         return new Response(upstream.body, {
