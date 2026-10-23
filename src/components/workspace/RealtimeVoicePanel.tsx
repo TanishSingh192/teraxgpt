@@ -87,27 +87,27 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
   function handleMessage(raw: string) {
     let message: Record<string, unknown>;
     try { message = JSON.parse(raw) as Record<string, unknown>; } catch { return; }
-    if (message.setupComplete) {
+    if (message["setupComplete"]) {
       setupCompleteRef.current = true;
       setConnected(true);
       setConnecting(false);
       setStatusText("Listening");
       return;
     }
-    const serverContent = message.serverContent as Record<string, unknown> | undefined;
-    const inputTranscription = (serverContent?.inputTranscription ?? message.inputTranscription) as { text?: string } | undefined;
-    const outputTranscription = (serverContent?.outputTranscription ?? message.outputTranscription) as { text?: string } | undefined;
+    const serverContent = message["serverContent"] as Record<string, unknown> | undefined;
+    const inputTranscription = (serverContent?.["inputTranscription"] ?? message["inputTranscription"]) as { text?: string } | undefined;
+    const outputTranscription = (serverContent?.["outputTranscription"] ?? message["outputTranscription"]) as { text?: string } | undefined;
     if (inputTranscription?.text) addTranscript("You", inputTranscription.text);
     if (outputTranscription?.text) addTranscript("TeraXGPT", outputTranscription.text);
     if (serverContent) {
-      if (serverContent.interrupted) {
+      if (serverContent["interrupted"]) {
         for (const source of audioSourcesRef.current) { try { source.stop(); } catch { /* already stopped */ } }
         audioSourcesRef.current.clear();
         nextAudioTimeRef.current = outputContextRef.current?.currentTime ?? 0;
         setStatusText("Listening");
       }
-      if (serverContent.turnComplete) setStatusText("Listening");
-      const modelTurn = serverContent.modelTurn as { parts?: Array<{ inlineData?: { data?: string; mimeType?: string }; text?: string }> } | undefined;
+      if (serverContent["turnComplete"]) setStatusText("Listening");
+      const modelTurn = serverContent["modelTurn"] as { parts?: Array<{ inlineData?: { data?: string; mimeType?: string }; text?: string }> } | undefined;
       for (const part of modelTurn?.parts ?? []) {
         if (part.text) addTranscript("TeraXGPT", part.text);
         const encoded = part.inlineData?.data;
@@ -130,9 +130,9 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
         setStatusText("Gemini is speaking");
       }
     }
-    if (message.goAway) setStatusText("Session ending soon");
-    if (message.error) {
-      const error = message.error as { message?: string };
+    if (message["goAway"]) setStatusText("Session ending soon");
+    if (message["error"]) {
+      const error = message["error"] as { message?: string };
       toast.error(error.message ?? "Gemini Live encountered an error.");
       setStatusText("Something went wrong");
     }
@@ -210,13 +210,13 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
           if (typeof event.data !== "string") return;
           let payload: Record<string, unknown>;
           try { payload = JSON.parse(event.data) as Record<string, unknown>; } catch { return; }
-          if (payload.setupComplete === true) {
+          if (payload["setupComplete"] === true) {
             if (settled) return;
             settled = true;
             window.clearTimeout(timeout);
             socket.removeEventListener("message", waitForSetup);
             resolve();
-          } else if (payload.error) {
+          } else if (payload["error"]) {
             if (settled) return;
             settled = true;
             window.clearTimeout(timeout);
