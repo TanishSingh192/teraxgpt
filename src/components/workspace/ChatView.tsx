@@ -1004,7 +1004,7 @@ export function ChatView({
                       </div>
                     )}
                   </div>
-                </div>
+                </article>
               ),
             )}
 
