@@ -15,13 +15,17 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiConnectorsRouteImport } from './routes/api/connectors'
+import { Route as ApiCoworkersRouteImport } from './routes/api/coworkers'
 import { Route as ApiPluginsRouteImport } from './routes/api/plugins'
 import { Route as ApiRealtimeSessionRouteImport } from './routes/api/realtime-session'
 import { Route as ApiSpeakRouteImport } from './routes/api/speak'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
+import { Route as ApiCoworkersHistoryRouteImport } from './routes/api/coworkers/history'
+import { Route as ApiCoworkersWorkerRouteImport } from './routes/api/coworkers/worker'
 import { Route as ApiPublicRunSchedulesRouteImport } from './routes/api/public/run-schedules'
+import { Route as ApiCoworkersRunsIdRouteImport } from './routes/api/coworkers/runs.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -51,6 +55,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
 const ApiConnectorsRoute = ApiConnectorsRouteImport.update({
   id: '/api/connectors',
   path: '/api/connectors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCoworkersRoute = ApiCoworkersRouteImport.update({
+  id: '/api/coworkers',
+  path: '/api/coworkers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPluginsRoute = ApiPluginsRouteImport.update({
@@ -83,10 +92,25 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/projects/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCoworkersHistoryRoute = ApiCoworkersHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => ApiCoworkersRoute,
+} as any)
+const ApiCoworkersWorkerRoute = ApiCoworkersWorkerRouteImport.update({
+  id: '/worker',
+  path: '/worker',
+  getParentRoute: () => ApiCoworkersRoute,
+} as any)
 const ApiPublicRunSchedulesRoute = ApiPublicRunSchedulesRouteImport.update({
   id: '/api/public/run-schedules',
   path: '/api/public/run-schedules',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCoworkersRunsIdRoute = ApiCoworkersRunsIdRouteImport.update({
+  id: '/runs/$id',
+  path: '/runs/$id',
+  getParentRoute: () => ApiCoworkersRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -96,13 +120,17 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/connectors': typeof ApiConnectorsRoute
+  '/api/coworkers': typeof ApiCoworkersRouteWithChildren
   '/api/plugins': typeof ApiPluginsRoute
   '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/api/coworkers/history': typeof ApiCoworkersHistoryRoute
+  '/api/coworkers/worker': typeof ApiCoworkersWorkerRoute
   '/api/public/run-schedules': typeof ApiPublicRunSchedulesRoute
+  '/api/coworkers/runs/$id': typeof ApiCoworkersRunsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -111,13 +139,17 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/connectors': typeof ApiConnectorsRoute
+  '/api/coworkers': typeof ApiCoworkersRouteWithChildren
   '/api/plugins': typeof ApiPluginsRoute
   '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects': typeof ProjectsIndexRoute
+  '/api/coworkers/history': typeof ApiCoworkersHistoryRoute
+  '/api/coworkers/worker': typeof ApiCoworkersWorkerRoute
   '/api/public/run-schedules': typeof ApiPublicRunSchedulesRoute
+  '/api/coworkers/runs/$id': typeof ApiCoworkersRunsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -127,13 +159,17 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/connectors': typeof ApiConnectorsRoute
+  '/api/coworkers': typeof ApiCoworkersRouteWithChildren
   '/api/plugins': typeof ApiPluginsRoute
   '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/api/coworkers/history': typeof ApiCoworkersHistoryRoute
+  '/api/coworkers/worker': typeof ApiCoworkersWorkerRoute
   '/api/public/run-schedules': typeof ApiPublicRunSchedulesRoute
+  '/api/coworkers/runs/$id': typeof ApiCoworkersRunsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -144,13 +180,17 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/chat'
     | '/api/connectors'
+    | '/api/coworkers'
     | '/api/plugins'
     | '/api/realtime-session'
     | '/api/speak'
     | '/api/transcribe'
     | '/projects/$projectId'
     | '/projects/'
+    | '/api/coworkers/history'
+    | '/api/coworkers/worker'
     | '/api/public/run-schedules'
+    | '/api/coworkers/runs/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -159,13 +199,17 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/chat'
     | '/api/connectors'
+    | '/api/coworkers'
     | '/api/plugins'
     | '/api/realtime-session'
     | '/api/speak'
     | '/api/transcribe'
     | '/projects/$projectId'
     | '/projects'
+    | '/api/coworkers/history'
+    | '/api/coworkers/worker'
     | '/api/public/run-schedules'
+    | '/api/coworkers/runs/$id'
   id:
     | '__root__'
     | '/'
@@ -174,13 +218,17 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/chat'
     | '/api/connectors'
+    | '/api/coworkers'
     | '/api/plugins'
     | '/api/realtime-session'
     | '/api/speak'
     | '/api/transcribe'
     | '/projects/$projectId'
     | '/projects/'
+    | '/api/coworkers/history'
+    | '/api/coworkers/worker'
     | '/api/public/run-schedules'
+    | '/api/coworkers/runs/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -190,6 +238,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiConnectorsRoute: typeof ApiConnectorsRoute
+  ApiCoworkersRoute: typeof ApiCoworkersRouteWithChildren
   ApiPluginsRoute: typeof ApiPluginsRoute
   ApiRealtimeSessionRoute: typeof ApiRealtimeSessionRoute
   ApiSpeakRoute: typeof ApiSpeakRoute
@@ -243,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiConnectorsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/coworkers': {
+      id: '/api/coworkers'
+      path: '/api/coworkers'
+      fullPath: '/api/coworkers'
+      preLoaderRoute: typeof ApiCoworkersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/plugins': {
       id: '/api/plugins'
       path: '/api/plugins'
@@ -285,6 +341,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/coworkers/history': {
+      id: '/api/coworkers/history'
+      path: '/history'
+      fullPath: '/api/coworkers/history'
+      preLoaderRoute: typeof ApiCoworkersHistoryRouteImport
+      parentRoute: typeof ApiCoworkersRoute
+    }
+    '/api/coworkers/worker': {
+      id: '/api/coworkers/worker'
+      path: '/worker'
+      fullPath: '/api/coworkers/worker'
+      preLoaderRoute: typeof ApiCoworkersWorkerRouteImport
+      parentRoute: typeof ApiCoworkersRoute
+    }
     '/api/public/run-schedules': {
       id: '/api/public/run-schedules'
       path: '/api/public/run-schedules'
@@ -292,8 +362,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRunSchedulesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/coworkers/runs/$id': {
+      id: '/api/coworkers/runs/$id'
+      path: '/runs/$id'
+      fullPath: '/api/coworkers/runs/$id'
+      preLoaderRoute: typeof ApiCoworkersRunsIdRouteImport
+      parentRoute: typeof ApiCoworkersRoute
+    }
   }
 }
+
+interface ApiCoworkersRouteChildren {
+  ApiCoworkersHistoryRoute: typeof ApiCoworkersHistoryRoute
+  ApiCoworkersWorkerRoute: typeof ApiCoworkersWorkerRoute
+  ApiCoworkersRunsIdRoute: typeof ApiCoworkersRunsIdRoute
+}
+
+const ApiCoworkersRouteChildren: ApiCoworkersRouteChildren = {
+  ApiCoworkersHistoryRoute: ApiCoworkersHistoryRoute,
+  ApiCoworkersWorkerRoute: ApiCoworkersWorkerRoute,
+  ApiCoworkersRunsIdRoute: ApiCoworkersRunsIdRoute,
+}
+
+const ApiCoworkersRouteWithChildren = ApiCoworkersRoute._addFileChildren(
+  ApiCoworkersRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -302,6 +395,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   ApiChatRoute: ApiChatRoute,
   ApiConnectorsRoute: ApiConnectorsRoute,
+  ApiCoworkersRoute: ApiCoworkersRouteWithChildren,
   ApiPluginsRoute: ApiPluginsRoute,
   ApiRealtimeSessionRoute: ApiRealtimeSessionRoute,
   ApiSpeakRoute: ApiSpeakRoute,
