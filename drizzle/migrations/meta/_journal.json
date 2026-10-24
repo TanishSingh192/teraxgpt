@@ -36,6 +36,13 @@
       "when": 1792640507144,
       "tag": "0004_create_connectors_and_plugin_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792860000000,
+      "tag": "0005_create_coworker_queue",
+      "breakpoints": true
     }
   ]
 }
