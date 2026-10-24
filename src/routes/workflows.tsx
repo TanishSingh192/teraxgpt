@@ -1,7 +1,7 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowDownToLine, ArrowLeft, Bot, Check, ChevronDown, CirclePlay, Code2,
+  ArrowDownToLine, ArrowLeft, Bot, ChevronDown, CirclePlay, Code2,
   GitBranch, GripVertical, Plus, Save, Sparkles, Trash2, Workflow, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
