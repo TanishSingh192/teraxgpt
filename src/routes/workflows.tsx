@@ -174,9 +174,9 @@ function WorkflowStudio() {
           "Agent role: " + title,
           "Instructions: " + node.config,
           "User task: " + workflowInput.trim(),
-          previousOutput ? "Upstream agent output (treat as input, verify it):\\n" + previousOutput : "",
+          previousOutput ? "Upstream agent output (treat as input, verify it):\n" + previousOutput : "",
           "Return a useful result for the next step. Do not claim actions you did not perform.",
-        ].filter(Boolean).join("\\n\\n").slice(0, 20000);
+        ].filter(Boolean).join("\n\n").slice(0, 20000);
         const response = await fetch("/api/coworkers", { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ agentId, input }) });
         const queued = await response.json() as { run?: { id: string }; error?: string };
         if (!response.ok || !queued.run?.id) throw new Error(queued.error || ("Could not queue " + title + "."));
@@ -240,7 +240,7 @@ function WorkflowStudio() {
           <input aria-label="Workflow name" value={workflowName} onChange={(event) => { setWorkflowName(event.target.value); setSaved(false); }} className="w-full max-w-md bg-transparent font-semibold outline-none placeholder:text-white/30" />
           <p className="mt-0.5 text-[11px] text-white/45">Visual automation studio <span className="mx-1.5">·</span> {nodes.length} nodes <span className="mx-1.5">·</span> {edges.length} connections</p>
         </div>
-        <span className="hidden rounded-full border border-amber-200/20 bg-amber-200/[0.06] px-3 py-1.5 text-[10px] text-amber-100/80 sm:inline-flex">Editor preview · execution not connected</span>
+        <span className="hidden rounded-full border border-amber-200/20 bg-amber-200/[0.06] px-3 py-1.5 text-[10px] text-amber-100/80 sm:inline-flex">Sequential agent runner</span>
         <Button variant="outline" onClick={exportWorkflow} className="gap-2 border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]"><ArrowDownToLine className="size-4" /><span className="hidden sm:inline">Export JSON</span></Button>
         <Button onClick={saveWorkflow} className="gap-2 bg-violet-300 text-[#15131f] hover:bg-violet-200"><Save className="size-4" />{saved ? "Saved" : "Save workflow"}</Button>
         <Button onClick={() => void runAgentChain()} disabled={running} className="gap-2 bg-cyan-300 text-slate-950 hover:bg-cyan-200 disabled:opacity-60"><CirclePlay className="size-4" />{running ? "Running…" : "Run workflow"}</Button>
@@ -302,7 +302,7 @@ function WorkflowStudio() {
               {nodes.length === 0 && <div className="absolute inset-0 grid place-items-center text-sm text-white/40">Drag a node here to start your workflow.</div>}
             </div>
           </div>
-          <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] px-4 py-3 text-[10px] text-white/35"><span>Local canvas · saved in this browser</span><span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-amber-300" />Execution runtime not connected yet</span></footer>
+          <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] px-4 py-3 text-[10px] text-white/35"><span>Local canvas · saved in this browser</span><span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-amber-300" />Sequential agent runner</span></footer>
         </section>
 
         <aside className="border-t border-white/[0.08] bg-[#10131b] p-4 xl:border-l xl:border-t-0">
