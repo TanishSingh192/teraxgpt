@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 
-export const LIVE_MODEL = "models/gemini-3.8-live";
-export const LIVE_INSTRUCTIONS =
+const LIVE_MODEL = "models/gemini-3.8-live";
+const LIVE_INSTRUCTIONS =
   "You are TeraXGPT, a helpful voice assistant. Speak naturally and concisely. Let the user interrupt you. " +
   "The user may turn on their camera; when you receive video frames, treat them as what the user is showing you right now " +
   "and describe or help with what you see. If no camera frames arrive, do not pretend to see anything. " +
