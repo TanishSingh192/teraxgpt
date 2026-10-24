@@ -35,7 +35,7 @@ function CodeBlock({ language, code, onOpenInIDE }: { language: string; code: st
   );
 }
 
-export function Markdown({ children, onOpenInIDE }: { children: string; onOpenInIDE?: ((code: string, language: string, ) => void) | undefined }) {
+export function Markdown({ children, onOpenInIDE }: { children: string; onOpenInIDE?: ((code: string, language: string) => void) | undefined }) {
   return (
     <div className="text-[14px] leading-relaxed text-ink text-pretty">
       <ReactMarkdown
