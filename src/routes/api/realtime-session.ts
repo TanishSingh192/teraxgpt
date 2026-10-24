@@ -1,6 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 
+export const LIVE_MODEL = "models/gemini-3.8-live";
+export const LIVE_INSTRUCTIONS =
+  "You are TeraXGPT, a helpful voice assistant. Speak naturally and concisely. Let the user interrupt you. " +
+  "The user may turn on their camera; when you receive video frames, treat them as what the user is showing you right now " +
+  "and describe or help with what you see. If no camera frames arrive, do not pretend to see anything. " +
+  "Do not claim to perform actions outside this voice session.";
+
 export const Route = createFileRoute("/api/realtime-session")({
   server: {
     handlers: {
@@ -25,23 +32,19 @@ export const Route = createFileRoute("/api/realtime-session")({
               uses: 1,
               expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
               newSessionExpireTime: new Date(now + 60 * 1000).toISOString(),
-              liveConnectConstraints: {
-                model: "models/gemini-3.8-live",
-                config: {
-                  responseModalities: ["AUDIO"],
-                  systemInstruction: {
-                    parts: [{ text: "You are TeraXGPT, a helpful voice assistant. Speak naturally and concisely. Let the user interrupt you. Do not claim to perform actions outside this voice session." }],
-                  },
-                  inputAudioTranscription: {},
-                  outputAudioTranscription: {},
-                },
+              bidiGenerateContentSetup: {
+                model: LIVE_MODEL,
+                generationConfig: { responseModalities: ["AUDIO"] },
+                systemInstruction: { parts: [{ text: LIVE_INSTRUCTIONS }] },
+                inputAudioTranscription: {},
+                outputAudioTranscription: {},
               },
             }),
             signal: request.signal,
           });
 
           if (!upstream.ok) {
-            console.error(`Gemini Live token creation failed [${upstream.status}]`);
+            console.error(`Gemini Live token creation failed [${upstream.status}]`, (await upstream.text()).slice(0, 300));
             return Response.json(
               { error: upstream.status === 429 ? "Gemini Live is busy. Try again shortly." : "Could not start Gemini Live. Check the server Gemini API configuration." },
               { status: upstream.status === 429 ? 429 : 502 },
@@ -52,7 +55,7 @@ export const Route = createFileRoute("/api/realtime-session")({
             return Response.json({ error: "Gemini returned an invalid Live session token." }, { status: 502 });
           }
           return Response.json(
-            { clientToken: data.name, expiresAt: data.expireTime ?? null },
+            { clientToken: data.name, model: LIVE_MODEL, instructions: LIVE_INSTRUCTIONS, expiresAt: data.expireTime ?? null },
             { headers: { "Cache-Control": "no-store" } },
           );
         } catch (error) {
