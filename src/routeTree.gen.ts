@@ -14,6 +14,7 @@ import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiPresentationsRouteImport } from './routes/api/presentations'
 import { Route as ApiConnectorsRouteImport } from './routes/api/connectors'
 import { Route as ApiCoworkersRouteImport } from './routes/api/coworkers'
 import { Route as ApiPluginsRouteImport } from './routes/api/plugins'
@@ -50,6 +51,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPresentationsRoute = ApiPresentationsRouteImport.update({
+  id: '/api/presentations',
+  path: '/api/presentations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiConnectorsRoute = ApiConnectorsRouteImport.update({
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/presentations': typeof ApiPresentationsRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/coworkers': typeof ApiCoworkersRouteWithChildren
   '/api/plugins': typeof ApiPluginsRoute
@@ -135,10 +142,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
-  '/workflows': typeof WorkflowsRoute
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/presentations': typeof ApiPresentationsRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/coworkers': typeof ApiCoworkersRouteWithChildren
   '/api/plugins': typeof ApiPluginsRoute
@@ -156,10 +163,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
-  '/workflows': typeof WorkflowsRoute
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/presentations': typeof ApiPresentationsRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/coworkers': typeof ApiCoworkersRouteWithChildren
   '/api/plugins': typeof ApiPluginsRoute
@@ -178,10 +185,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/agents'
-    | '/workflows'
     | '/auth'
     | '/settings'
     | '/api/chat'
+    | '/api/presentations'
     | '/api/connectors'
     | '/api/coworkers'
     | '/api/plugins'
@@ -198,10 +205,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/agents'
-    | '/workflows'
     | '/auth'
     | '/settings'
     | '/api/chat'
+    | '/api/presentations'
     | '/api/connectors'
     | '/api/coworkers'
     | '/api/plugins'
@@ -218,10 +225,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/agents'
-    | '/workflows'
     | '/auth'
     | '/settings'
     | '/api/chat'
+    | '/api/presentations'
     | '/api/connectors'
     | '/api/coworkers'
     | '/api/plugins'
@@ -242,6 +249,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   SettingsRoute: typeof SettingsRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiPresentationsRoute: typeof ApiPresentationsRoute
   ApiConnectorsRoute: typeof ApiConnectorsRoute
   ApiCoworkersRoute: typeof ApiCoworkersRouteWithChildren
   ApiPluginsRoute: typeof ApiPluginsRoute
@@ -269,11 +277,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workflows': {
-      id: '/workflows'
-      path: '/workflows'
-      fullPath: '/workflows'
-      preLoaderRoute: typeof WorkflowsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -295,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/presentations': {
+      id: '/api/presentations'
+      path: '/api/presentations'
+      fullPath: '/api/presentations'
+      preLoaderRoute: typeof ApiPresentationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/connectors': {
@@ -403,10 +413,10 @@ const ApiCoworkersRouteWithChildren = ApiCoworkersRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentsRoute: AgentsRoute,
-  WorkflowsRoute: WorkflowsRoute,
   AuthRoute: AuthRoute,
   SettingsRoute: SettingsRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiPresentationsRoute: ApiPresentationsRoute,
   ApiConnectorsRoute: ApiConnectorsRoute,
   ApiCoworkersRoute: ApiCoworkersRouteWithChildren,
   ApiPluginsRoute: ApiPluginsRoute,
