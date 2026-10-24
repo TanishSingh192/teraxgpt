@@ -28,12 +28,11 @@ function buildProjectPreview(files: WorkspaceFile[]) {
     if (!/<html[\s>]/i.test(html) && !/<!doctype/i.test(html)) {
       html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${html}</body></html>`;
     }
-    if (css && !/<link[^>]+\.css/i.test(html) && !/<style[\s>]/i.test(html)) {
-      html = html.replace("</head>", `<style>\n${css}\n</style></head>`);
-    }
-    if (js && !/<script[^>]+src=/i.test(html)) {
-      html = html.replace("</body>", `<script>\n${escapeInlineScript(js)}\n</script></body>`);
-    }
+    // Local assets are not physical files inside srcDoc; inline them from the workspace file tree.
+    html = html.replace(/<link\b[^>]*href=["\u0027][^"\u0027]+\.css(?:\?[^"\u0027]*)?["\u0027][^>]*>/gi, "");
+    html = html.replace(/<script\b[^>]*src=["\u0027][^"\u0027]+\.(?:m?js)(?:\?[^"\u0027]*)?["\u0027][^>]*>\s*<\/script>/gi, "");
+    if (css) html = html.replace("</head>", `<style>\n${css}\n</style></head>`);
+    if (js) html = html.replace("</body>", `<script>\n${escapeInlineScript(js)}\n</script></body>`);
     return html;
   }
   if (files.length === 1 && /\.css$/i.test(files[0]!.name)) {
