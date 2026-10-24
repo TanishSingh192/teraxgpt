@@ -141,8 +141,23 @@ export const Route = createFileRoute("/api/connectors")({
           return Response.json({ connector: { id: data.id, name: data.name }, tools });
         } catch (error) {
           const message = error instanceof Error ? error.message : "";
-          console.error("MCP connector operation failed.");
-          return Response.json({ error: message.includes("timed out") ? "MCP server timed out." : "Could not communicate with the MCP server. Check its endpoint and credentials." }, { status: 502 });
+          console.error("MCP connector operation failed:", message.slice(0, 300));
+          if (/timed out|timeout|AbortError/i.test(message)) {
+            return Response.json({ error: "MCP server timed out. Check that the server is online and accepts requests at this endpoint." }, { status: 504 });
+          }
+          if (/fetch failed|ENOTFOUND|ECONNREFUSED|certificate|TLS|network error/i.test(message)) {
+            return Response.json({ error: "Could not reach the MCP host. Check the hostname, TLS certificate, firewall, and public network access." }, { status: 502 });
+          }
+          if (/HTTP 401|HTTP 403|unauthorized|forbidden|invalid token/i.test(message)) {
+            return Response.json({ error: "MCP authentication failed. Check the bearer token and the server authentication requirements." }, { status: 502 });
+          }
+          if (/HTTP 404|HTTP 405|non-JSON content/i.test(message)) {
+            return Response.json({ error: "The URL responded, but it does not look like a compatible MCP endpoint. Use the exact Streamable HTTP MCP URL (often ending in /mcp), not the homepage." }, { status: 502 });
+          }
+          if (/MCP server returned HTTP|MCP protocol error|MCP server returned an empty|different request ID/i.test(message)) {
+            return Response.json({ error: message.slice(0, 320) }, { status: 502 });
+          }
+          return Response.json({ error: "MCP connection failed. Verify the endpoint, bearer token, supported Streamable HTTP transport, and server logs." }, { status: 502 });
         }
       },
     },
