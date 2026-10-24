@@ -123,8 +123,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
   '/workflows': typeof WorkflowsRoute
-  '/workflows': typeof WorkflowsRoute
-  '/workflows': typeof WorkflowsRoute
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
@@ -144,6 +142,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
+  '/workflows': typeof WorkflowsRoute
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
@@ -164,6 +163,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
+  '/workflows': typeof WorkflowsRoute
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
@@ -186,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agents'
     | '/workflows'
+    | '/workflows'
     | '/auth'
     | '/settings'
     | '/api/chat'
@@ -205,6 +206,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/agents'
+    | '/workflows'
     | '/auth'
     | '/settings'
     | '/api/chat'
@@ -224,6 +226,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/agents'
+    | '/workflows'
     | '/auth'
     | '/settings'
     | '/api/chat'
