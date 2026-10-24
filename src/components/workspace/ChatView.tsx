@@ -39,6 +39,7 @@ import { RealtimeVoicePanel } from "@/components/workspace/RealtimeVoicePanel";
 import { CoworkerWorkspace } from "@/components/workspace/CoworkerWorkspace";
 import { CanvasStudio } from "@/components/workspace/CanvasStudio";
 import { GitHubDevelopment } from "@/components/workspace/GitHubDevelopment";
+import { PresentationPreview, type PresentationResult } from "@/components/workspace/PresentationPreview";
 import { Button } from "@/components/ui/button";
 import type { TurnInfo } from "@/components/workspace/ContextPanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -276,6 +277,9 @@ export function ChatView({
   const [documentStudioOpen, setDocumentStudioOpen] = useState(false);
   const [canvasStudioOpen, setCanvasStudioOpen] = useState(false);
   const [githubDevelopmentOpen, setGithubDevelopmentOpen] = useState(false);
+  const [presentationGenerating, setPresentationGenerating] = useState(false);
+  const [presentationResult, setPresentationResult] = useState<PresentationResult | null>(null);
+  const [presentationMessageId, setPresentationMessageId] = useState<string | null>(null);
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentType, setDocumentType] = useState("report");
   const [selectedDocumentMessages, setSelectedDocumentMessages] = useState<string[]>([]);
@@ -421,6 +425,7 @@ export function ChatView({
 
   const {
     messages,
+    setMessages,
     sendMessage,
     status,
     error,
@@ -522,7 +527,7 @@ export function ChatView({
     container.scrollTop = container.scrollHeight;
   }, [messages]);
 
-  const busy = status === "submitted" || status === "streaming";
+  const busy = status === "submitted" || status === "streaming" || presentationGenerating;
 
   const attachments = useMemo(() => {
     const out: { name: string; size: number; type: string }[] = [];
@@ -594,6 +599,41 @@ export function ChatView({
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth.user?.id;
     if (!userId) return;
+
+    const presentationIntent = /\b(?:make|create|generate|build|prepare|design|draft)\b.{0,100}\b(?:pptx?|power\s*point|presentation|slides?)\b/i.test(text) || /\b(?:pptx?|power\s*point|presentation|slides?)\b.{0,100}\b(?:make|create|generate|build|prepare|design)\b/i.test(text);
+    if (presentationIntent) {
+      if (engineRef.current === "agno") { toast.error("PowerPoint generation currently requires the TeraXGPT engine, not Agno AgentOS."); return; }
+      if (files.length > 0) { toast.error("For now, create the PowerPoint from your prompt without attachments."); return; }
+      setPresentationGenerating(true);
+      try {
+        let convId = conversationRef.current;
+        if (!temporaryChat && !convId) {
+          const { data: created, error: createError } = await supabase.from("conversations").insert({ user_id: userId, title: text.slice(0, 60) || "PowerPoint presentation", model_preference: modelId, project_id: projectId }).select("id").single();
+          if (createError || !created) throw new Error("Could not start the conversation.");
+          convId = created.id; conversationRef.current = convId; onConversationCreated(convId, text.slice(0, 60) || "PowerPoint presentation");
+        }
+        const token = await freshAccessToken();
+        const response = await fetch("/api/presentations", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ prompt: text, slideCount: 10, style: "modern" }) });
+        const payload = await response.json() as PresentationResult & { error?: string };
+        if (!response.ok) throw new Error(payload.error || "Could not create the PowerPoint.");
+        const userMessageId = crypto.randomUUID();
+        const assistantMessageId = crypto.randomUUID();
+        const userMessage = { id: userMessageId, role: "user" as const, parts: [{ type: "text" as const, text }] };
+        const assistantText = `Created **${payload.deck.title}** as a ${payload.deck.slides.length}-slide PowerPoint using ${payload.provider}. Preview the slides below or download the editable .pptx file.`;
+        const assistantMessage = { id: assistantMessageId, role: "assistant" as const, parts: [{ type: "text" as const, text: assistantText }] };
+        if (!temporaryChat && convId) {
+          await supabase.from("messages").insert({ conversation_id: convId, user_id: userId, role: "user", content: [{ type: "text", text }] });
+          await supabase.from("messages").insert({ conversation_id: convId, user_id: userId, role: "assistant", content: [{ type: "text", text: assistantText }] });
+          await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
+        }
+        setMessages((current) => [...current, userMessage, assistantMessage]);
+        setPresentationResult(payload); setPresentationMessageId(assistantMessageId);
+        setInput(""); setFiles([]);
+        toast.success("PowerPoint created. Preview it in chat or download the .pptx.");
+      } catch (cause) { toast.error(cause instanceof Error ? cause.message : "PowerPoint generation failed."); }
+      finally { setPresentationGenerating(false); }
+      return;
+    }
 
     if (temporaryChat) {
       conversationRef.current = null;
@@ -1030,6 +1070,7 @@ export function ChatView({
                         <span>Thinking through your request</span>
                       </div>
                     ) : null}
+                    {presentationResult && presentationMessageId === message.id && message.role === "assistant" && <PresentationPreview result={presentationResult} />}
                     {codeWorkspace?.messageId === message.id && message.role === "assistant" && (
                       <CodeWorkspace
                         initialCode={codeWorkspace.code}
