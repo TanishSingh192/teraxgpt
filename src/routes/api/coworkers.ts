@@ -52,8 +52,17 @@ export const Route = createFileRoute("/api/coworkers")({
           status: "queued",
         }).select("id,status,agent_id,conversation_id,created_at").single();
         if (error || !data) {
-          console.error("Coworker run enqueue failed.");
-          return Response.json({ error: "Could not enqueue the task. Verify the coworker database migration is applied." }, { status: 503 });
+          console.error("Coworker run enqueue failed:", error?.code ?? "no_code", error?.message?.slice(0, 240) ?? "no row returned");
+          if (error?.code === "42P01" || error?.code === "PGRST205") {
+            return Response.json({ error: "Coworker database tables are missing. Apply drizzle/migrations/0005_create_coworker_queue.sql to the connected Supabase project, then reload the schema cache." }, { status: 503 });
+          }
+          if (error?.code === "42501" || error?.code === "PGRST301") {
+            return Response.json({ error: "Supabase denied access to the coworker queue. Verify the authenticated INSERT grant and row-level security policy for coworker_runs." }, { status: 403 });
+          }
+          if (error?.code === "23503") {
+            return Response.json({ error: "The conversation reference is invalid. Start a new conversation and try again." }, { status: 400 });
+          }
+          return Response.json({ error: "Could not enqueue the task. Check server logs for the Supabase database error and confirm the coworker migration is applied." }, { status: 503 });
         }
         return Response.json({ run: data }, { status: 202, headers: { "Cache-Control": "no-store" } });
       },
