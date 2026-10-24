@@ -186,7 +186,6 @@ export interface FileRouteTypes {
     | '/'
     | '/agents'
     | '/workflows'
-    | '/workflows'
     | '/auth'
     | '/settings'
     | '/api/chat'
