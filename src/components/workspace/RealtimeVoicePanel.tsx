@@ -165,7 +165,7 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
       await Promise.all([inputContext.resume(), outputContext.resume()]);
 
       const socket = new WebSocket(
-        `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(sessionData.clientToken)}`,
+        `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(sessionData.clientToken)}`,
       );
       socketRef.current = socket;
       socket.onmessage = (event) => { if (typeof event.data === "string") handleMessage(event.data); };
@@ -190,7 +190,7 @@ export function RealtimeVoicePanel({ onClose }: { onClose: () => void }) {
 
       socket.send(JSON.stringify({
         setup: {
-          model: "models/gemini-3.1-flash-live-preview",
+          model: "models/gemini-3.8-live",
           generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } } },
           systemInstruction: { parts: [{ text: "You are TeraXGPT, a helpful voice assistant. Speak naturally and concisely. Let the user interrupt you. Do not claim to perform actions outside this voice session." }] },
           inputAudioTranscription: {},
