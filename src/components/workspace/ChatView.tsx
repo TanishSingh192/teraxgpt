@@ -626,7 +626,11 @@ export function ChatView({
     const userId = auth.user?.id;
     if (!userId) return;
 
-    const presentationIntent = /\b(?:make|create|generate|build|prepare|design|draft|put together)\b.{0,120}\b(?:pptx?|power\s*point|presentation|slides?|slide deck|deck|keynote)\b/i.test(text) || /\b(?:pptx?|power\s*point|presentation|slides?|slide deck|deck|keynote)\b.{0,120}\b(?:make|create|generate|build|prepare|design|draft)\b/i.test(text) || /\b(?:i need|i have|i want|can you|could you|please)\b.{0,80}\b(?:pptx?|power\s*point|presentation|slide deck|slides?)\b/i.test(text);
+    const presentationIntent = /\\b(?:ppt|pptx|power\\s*point|presentation|slide deck|slides?)\\b/i.test(text) && (
+      /\\b(?:make|create|generate|build|prepare|design|draft|put together|turn .* into|convert .* to)\\b/i.test(text) ||
+      /\\b(?:i need|i have to|i want|i have|can you|could you|please|help me|need to)\\b/i.test(text) ||
+      /\\b(?:about|on|for|covering|explaining|regarding)\\b/i.test(text)
+    );
     if (presentationIntent) {
       if (engineRef.current === "agno") { toast.error("PowerPoint generation currently requires the TeraXGPT engine, not Agno AgentOS."); return; }
       if (files.length > 0) { toast.error("For now, create the PowerPoint from your prompt without attachments."); return; }
