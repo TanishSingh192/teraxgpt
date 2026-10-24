@@ -12,6 +12,8 @@ import {
   Printer,
   Download,
   Globe,
+  Github,
+  PenTool,
   EyeOff,
   ImagePlus,
   Loader2,
@@ -35,6 +37,8 @@ import { Markdown } from "@/components/workspace/Markdown";
 import { CodeWorkspace, type WorkspaceFile } from "@/components/workspace/CodeWorkspace";
 import { RealtimeVoicePanel } from "@/components/workspace/RealtimeVoicePanel";
 import { CoworkerWorkspace } from "@/components/workspace/CoworkerWorkspace";
+import { CanvasStudio } from "@/components/workspace/CanvasStudio";
+import { GitHubDevelopment } from "@/components/workspace/GitHubDevelopment";
 import { Button } from "@/components/ui/button";
 import type { TurnInfo } from "@/components/workspace/ContextPanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +63,7 @@ type PlanStep = { title: string; status: "pending" | "active" | "done" | "skippe
 
 function GeneratedImage({ path, prompt }: { path: string; prompt: string }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   useEffect(() => {
     let alive = true;
     void supabase.storage
@@ -80,8 +85,17 @@ function GeneratedImage({ path, prompt }: { path: string; prompt: string }) {
   }
   return (
     <figure className="mb-3">
-      <img src={url} alt={prompt} className="w-full max-w-[420px] rounded-xl" />
-      <figcaption className="mt-1.5 text-[11px] text-subtle">{prompt}</figcaption>
+      <button type="button" onClick={() => setPreviewOpen(true)} aria-label="Enlarge generated image" title="Click to enlarge" className="group block max-w-full cursor-zoom-in overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <img src={url} alt={prompt} className="w-full max-w-[420px] rounded-xl transition-transform duration-200 group-hover:scale-[1.02]" />
+      </button>
+      <figcaption className="mt-1.5 text-[11px] text-subtle">{prompt} · Click image to preview</figcaption>
+      {previewOpen && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-3 sm:p-8" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPreviewOpen(false); }} onKeyDown={(event) => { if (event.key === "Escape") setPreviewOpen(false); }}>
+        <div role="dialog" aria-modal="true" aria-label="Generated image preview" className="relative flex max-h-full max-w-full flex-col items-center">
+          <button type="button" onClick={() => setPreviewOpen(false)} aria-label="Close image preview" className="mb-3 self-end rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20">Close ✕</button>
+          <img src={url} alt={prompt} className="max-h-[82vh] max-w-[94vw] rounded-xl object-contain shadow-2xl" />
+          <p className="mt-3 max-w-3xl text-center text-xs text-white/75">{prompt}</p>
+        </div>
+      </div>}
     </figure>
   );
 }
@@ -260,6 +274,8 @@ export function ChatView({
   const [input, setInput] = useState("");
   const [codeWorkspace, setCodeWorkspace] = useState<{ code: string; language: string; files: WorkspaceFile[]; messageId: string } | null>(null);
   const [documentStudioOpen, setDocumentStudioOpen] = useState(false);
+  const [canvasStudioOpen, setCanvasStudioOpen] = useState(false);
+  const [githubDevelopmentOpen, setGithubDevelopmentOpen] = useState(false);
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentType, setDocumentType] = useState("report");
   const [selectedDocumentMessages, setSelectedDocumentMessages] = useState<string[]>([]);
@@ -301,6 +317,7 @@ export function ChatView({
   skillRef.current = skillId;
   const conversationRef = useRef<string | null>(conversationId);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const recorderRef = useRef<{ stop: () => Promise<File>; cancel: () => void } | null>(null);
@@ -488,6 +505,15 @@ export function ChatView({
     },
     onError: (err) => toast.error(err.message || "The model could not answer. Try again."),
   });
+
+  useEffect(() => {
+    const textarea = promptInputRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    const maxHeight = Math.min(360, Math.round(window.innerHeight * 0.45));
+    textarea.style.height = Math.min(textarea.scrollHeight, maxHeight) + "px";
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [input]);
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -740,6 +766,8 @@ export function ChatView({
             </label>
           )}
           <div className="ml-auto flex shrink-0 items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setGithubDevelopmentOpen(true)} aria-label="Open GitHub development" title="GitHub development" className="hidden sm:inline-flex"><Github /><span className="hidden lg:inline">GitHub</span></Button>
+            <Button variant="ghost" size="sm" onClick={() => setCanvasStudioOpen(true)} aria-label="Open canvas" title="Open canvas" className="hidden sm:inline-flex"><PenTool /><span className="hidden lg:inline">Canvas</span></Button>
             <Button variant="secondary" size="sm" onClick={openDocumentStudio} disabled={assistantMessages.length === 0 || busy} aria-label="Open Document Studio" className="hidden md:inline-flex"><FileText /><span className="hidden lg:inline">Document Studio</span></Button>
             <Button variant="ghost" size="sm" onClick={exportConversation} disabled={messages.length === 0 || busy} aria-label="Export conversation as Markdown" title="Export conversation as Markdown" className="hidden sm:inline-flex"><Download /><span className="hidden lg:inline">Export</span></Button>
             <div className="relative" ref={toolbarMenuRef}>
@@ -750,6 +778,8 @@ export function ChatView({
                 <div role="menu" aria-label="Workspace actions" className="absolute right-0 top-11 z-50 max-h-[min(75vh,520px)] w-[min(88vw,280px)] overflow-y-auto rounded-xl border border-line bg-panel p-1.5 shadow-xl">
                   <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-subtle">Workspace</div>
                   <label className="flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[13px] sm:hidden"><span>Model</span><select value={modelId} disabled={engine === "agno"} onChange={(event) => { setModelId(event.target.value); setToolbarMenuOpen(false); }} aria-label="AI model" className="max-w-36 rounded-md border border-line bg-background px-2 py-1.5 text-[12px] outline-none disabled:opacity-50"><option value={AUTO}>Auto</option>{MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}</select></label>
+                  <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); setGithubDevelopmentOpen(true); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><Github className="size-4 text-subtle" />GitHub development</button>
+                  <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); setCanvasStudioOpen(true); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><PenTool className="size-4 text-subtle" />Canvas</button>
                   <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); void openDocumentStudio(); }} disabled={assistantMessages.length === 0 || busy} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background disabled:opacity-40 md:hidden"><FileText className="size-4 text-subtle" />Document Studio</button>
                   <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); exportConversation(); }} disabled={messages.length === 0 || busy} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background disabled:opacity-40 sm:hidden"><Download className="size-4 text-subtle" />Export conversation</button>
                   <button role="menuitem" type="button" onClick={() => {
@@ -1190,6 +1220,7 @@ export function ChatView({
 
                 </div>
                 <textarea
+                  ref={promptInputRef}
                   rows={1}
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
@@ -1201,7 +1232,7 @@ export function ChatView({
                   }}
                   placeholder="Ask, build, investigate, create…"
                   aria-label="Message TeraXGPT"
-                  className="max-h-40 min-h-10 flex-1 resize-none bg-transparent px-1 py-2.5 text-[14px] leading-relaxed outline-none placeholder:text-subtle"
+                  className="min-h-12 max-h-[45vh] flex-1 resize-none bg-transparent px-1 py-3 text-[14px] leading-relaxed outline-none placeholder:text-subtle"
                 />
                 <Button
                   onClick={() => void handleSend()}
@@ -1217,6 +1248,8 @@ export function ChatView({
             <p className="mt-2 text-center text-[10px] text-subtle">TeraX CPT can make mistakes. Check important information.</p>
           </div>
         </div>
+        {githubDevelopmentOpen && <GitHubDevelopment onClose={() => setGithubDevelopmentOpen(false)} />}
+        {canvasStudioOpen && <CanvasStudio onClose={() => setCanvasStudioOpen(false)} onUsePrompt={(prompt) => setInput((current) => current.trim() ? current + "\\n\\n" + prompt : prompt)} />}
         {documentStudioOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDocumentStudioOpen(false); }}>
             <section role="dialog" aria-modal="true" aria-labelledby="document-studio-title" className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-panel shadow-2xl">
