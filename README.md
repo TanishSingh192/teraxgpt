@@ -198,7 +198,7 @@ The current `.env.example` includes the following variables:
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Client-side publishable key |
 | `VITE_SUPABASE_URL` | Client-side Supabase URL |
 | `CONNECTOR_ENCRYPTION_KEY` | Stable server-only key used to encrypt stored MCP bearer tokens |
-| `GEMINI_API_KEY` | Optional server-only Gemini Live ephemeral-session token creation; required to use live voice |
+| `GEMINI_API_KEY` | Server-only key required for Gemini-powered PowerPoint generation and used by optional Gemini Live voice features |
 
 Generate a connector encryption key with:
 
