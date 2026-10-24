@@ -3,7 +3,7 @@ import { Code2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-function CodeBlock({ language, code, onOpenInIDE }: { language: string; code: string; onOpenInIDE?: ((code: string, language: string) => void) | undefined }) {
+function CodeBlock({ language, code, onOpenInIDE }: { language: string; code: string; onOpenInIDE?: ((code: string, language: string, sourceText?: string) => void) | undefined; sourceText: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="my-4 overflow-hidden rounded-xl bg-code-bg ring-1 ring-black/40">
@@ -11,7 +11,7 @@ function CodeBlock({ language, code, onOpenInIDE }: { language: string; code: st
         <span className="font-mono">{language || "code"}</span>
         <div className="flex items-center gap-3">
           {onOpenInIDE && (
-            <button type="button" className="flex items-center gap-1.5 font-mono transition-colors hover:text-white/80" onClick={() => onOpenInIDE(code, language || "html")} title="Edit and run this code in TeraXGPT">
+            <button type="button" className="flex items-center gap-1.5 font-mono transition-colors hover:text-white/80" onClick={() => onOpenInIDE(code, language || "html", sourceText)} title="Edit and run this code in TeraXGPT">
               <Code2 className="size-3.5" /> Open in IDE
             </button>
           )}
@@ -35,7 +35,7 @@ function CodeBlock({ language, code, onOpenInIDE }: { language: string; code: st
   );
 }
 
-export function Markdown({ children, onOpenInIDE }: { children: string; onOpenInIDE?: ((code: string, language: string) => void) | undefined }) {
+export function Markdown({ children, onOpenInIDE }: { children: string; onOpenInIDE?: ((code: string, language: string, sourceText?: string) => void) | undefined }) {
   return (
     <div className="text-[14px] leading-relaxed text-ink text-pretty">
       <ReactMarkdown
@@ -97,7 +97,7 @@ export function Markdown({ children, onOpenInIDE }: { children: string; onOpenIn
                 </code>
               );
             }
-            return <CodeBlock language={match?.[1] ?? ""} code={raw} onOpenInIDE={onOpenInIDE} />;
+            return <CodeBlock language={match?.[1] ?? ""} code={raw} onOpenInIDE={onOpenInIDE} sourceText={children} />;
           },
           pre: ({ children }) => <>{children}</>,
         }}
