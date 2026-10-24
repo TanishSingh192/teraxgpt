@@ -578,6 +578,32 @@ export function ChatView({
     }
   }
 
+  async function refinePresentation(instruction: string) {
+    if (!presentationResult || presentationGenerating) return;
+    setPresentationGenerating(true);
+    try {
+      const token = await freshAccessToken();
+      const reference = JSON.stringify(presentationResult.deck).slice(0, 7000);
+      const response = await fetch("/api/presentations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          prompt: `Revise this existing PowerPoint deck according to the user's instructions. Preserve useful material and slide count, but apply the requested changes. Existing deck JSON: ${reference}. User's revision request: ${instruction}`,
+          slideCount: presentationResult.deck.slides.length,
+          style: /minimal|simple|clean/i.test(instruction) ? "minimal" : /bold|vibrant|dramatic/i.test(instruction) ? "bold" : /corporate|professional|business/i.test(instruction) ? "corporate" : "modern",
+        }),
+      });
+      const payload = await response.json() as PresentationResult & { error?: string };
+      if (!response.ok) throw new Error(payload.error || "Could not refine the PowerPoint.");
+      setPresentationResult(payload);
+      toast.success("PowerPoint updated.");
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "PowerPoint refinement failed.");
+    } finally {
+      setPresentationGenerating(false);
+    }
+  }
+
   async function handleSend(overrideText?: string) {
     const text = (overrideText ?? input).trim();
     if ((!text && files.length === 0) || busy) return;
@@ -600,7 +626,7 @@ export function ChatView({
     const userId = auth.user?.id;
     if (!userId) return;
 
-    const presentationIntent = /\b(?:make|create|generate|build|prepare|design|draft)\b.{0,100}\b(?:pptx?|power\s*point|presentation|slides?)\b/i.test(text) || /\b(?:pptx?|power\s*point|presentation|slides?)\b.{0,100}\b(?:make|create|generate|build|prepare|design)\b/i.test(text);
+    const presentationIntent = /\b(?:make|create|generate|build|prepare|design|draft|put together)\b.{0,120}\b(?:pptx?|power\s*point|presentation|slides?|slide deck|deck|keynote)\b/i.test(text) || /\b(?:pptx?|power\s*point|presentation|slides?|slide deck|deck|keynote)\b.{0,120}\b(?:make|create|generate|build|prepare|design|draft)\b/i.test(text) || /\b(?:i need|i have|i want|can you|could you|please)\b.{0,80}\b(?:pptx?|power\s*point|presentation|slide deck|slides?)\b/i.test(text);
     if (presentationIntent) {
       if (engineRef.current === "agno") { toast.error("PowerPoint generation currently requires the TeraXGPT engine, not Agno AgentOS."); return; }
       if (files.length > 0) { toast.error("For now, create the PowerPoint from your prompt without attachments."); return; }
@@ -613,7 +639,7 @@ export function ChatView({
           convId = created.id; conversationRef.current = convId; onConversationCreated(convId, text.slice(0, 60) || "PowerPoint presentation");
         }
         const token = await freshAccessToken();
-        const response = await fetch("/api/presentations", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ prompt: text, slideCount: Math.max(4, Math.min(20, Number(text.match(/\b(\d{1,2})\s*(?:slides?|pages?)\b/i)?.[1] ?? 10))), style: "modern" }) });
+        const response = await fetch("/api/presentations", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ prompt: text, slideCount: Math.max(4, Math.min(20, Number(text.match(/\b(\d{1,2})\s*(?:slides?|pages?)\b/i)?.[1] ?? 10))), audience: text.match(/\bfor (?:an? |the )?([^,.!?]{2,80})/i)?.[1]?.trim(), style: /minimal|simple|clean/i.test(text) ? "minimal" : /bold|vibrant|dramatic/i.test(text) ? "bold" : /corporate|professional|business/i.test(text) ? "corporate" : "modern" }) });
         const payload = await response.json() as PresentationResult & { error?: string };
         if (!response.ok) throw new Error(payload.error || "Could not create the PowerPoint.");
         const userMessageId = crypto.randomUUID();
@@ -1070,7 +1096,7 @@ export function ChatView({
                         <span>Thinking through your request</span>
                       </div>
                     ) : null}
-                    {presentationResult && presentationMessageId === message.id && message.role === "assistant" && <PresentationPreview result={presentationResult} />}
+                    {presentationResult && presentationMessageId === message.id && message.role === "assistant" && <PresentationPreview result={presentationResult} onRefine={(instruction) => void refinePresentation(instruction)} busy={presentationGenerating} />}
                     {codeWorkspace?.messageId === message.id && message.role === "assistant" && (
                       <CodeWorkspace
                         initialCode={codeWorkspace.code}
