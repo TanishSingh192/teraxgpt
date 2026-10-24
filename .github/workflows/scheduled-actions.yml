@@ -1,0 +1,38 @@
+name: Run scheduled actions
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teraxgpt-scheduled-actions
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate scheduler configuration
+        env:
+          APP_URL: ${{ vars.TERAXGPT_APP_URL }}
+          RUNNER_SECRET: ${{ secrets.SCHEDULE_RUNNER_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$RUNNER_SECRET" ]; then
+            echo "::error::Configure repository variable TERAXGPT_APP_URL and secret SCHEDULE_RUNNER_SECRET."
+            exit 1
+          fi
+      - name: Run due scheduled actions
+        env:
+          APP_URL: ${{ vars.TERAXGPT_APP_URL }}
+          RUNNER_SECRET: ${{ secrets.SCHEDULE_RUNNER_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --max-time 240 \
+            -X POST "${APP_URL%/}/api/public/run-schedules" \
+            -H "Authorization: Bearer $RUNNER_SECRET" \
+            -H "Content-Type: application/json"
