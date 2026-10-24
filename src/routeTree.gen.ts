@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentsRouteImport } from './routes/agents'
-import { Route as WorkflowsRouteImport } from './routes/workflows'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
@@ -36,11 +35,6 @@ const IndexRoute = IndexRouteImport.update({
 const AgentsRoute = AgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WorkflowsRoute = WorkflowsRouteImport.update({
-  id: '/workflows',
-  path: '/workflows',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -122,7 +116,6 @@ const ApiCoworkersRunsIdRoute = ApiCoworkersRunsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
-  '/workflows': typeof WorkflowsRoute
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
@@ -246,7 +239,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgentsRoute: typeof AgentsRoute
-  WorkflowsRoute: typeof WorkflowsRoute
   AuthRoute: typeof AuthRoute
   SettingsRoute: typeof SettingsRoute
   ApiChatRoute: typeof ApiChatRoute
