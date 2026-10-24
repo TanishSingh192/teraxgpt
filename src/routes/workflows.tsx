@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { freshAccessToken } from "@/lib/session-token";
 import {
   ArrowDownToLine, ArrowLeft, Bot, ChevronDown, CirclePlay, Code2,
   GitBranch, GripVertical, Plus, Save, Sparkles, Trash2, Workflow, Zap,
@@ -64,6 +65,9 @@ function WorkflowStudio() {
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [workflowName, setWorkflowName] = useState("Research & synthesis pipeline");
   const [saved, setSaved] = useState(false);
+  const [workflowInput, setWorkflowInput] = useState("");
+  const [running, setRunning] = useState(false);
+  const [runLog, setRunLog] = useState<string[]>([]);
   const selected = nodes.find((node) => node.id === selectedId) ?? null;
 
   useEffect(() => {
@@ -139,6 +143,64 @@ function WorkflowStudio() {
     setConnectMode(false);
   }
 
+  async function runAgentChain() {
+    if (running) return;
+    const agentNodes = nodes.filter((node) => node.kind === "agent");
+    if (!workflowInput.trim()) { toast.error("Enter a task for this workflow first."); return; }
+    if (!agentNodes.length) { toast.error("Add at least one AI agent node to run the workflow."); return; }
+    const ordered: FlowNode[] = [];
+    const visited = new Set<string>();
+    const visit = (id: string) => {
+      if (visited.has(id)) return;
+      visited.add(id);
+      edges.filter((edge) => edge.to === id).forEach((edge) => visit(edge.from));
+      const node = nodes.find((item) => item.id === id);
+      if (node) ordered.push(node);
+    };
+    nodes.forEach((node) => visit(node.id));
+    const orderedAgents = ordered.filter((node) => node.kind === "agent");
+    setRunning(true); setRunLog([]);
+    let previousOutput = "";
+    try {
+      for (let index = 0; index < orderedAgents.length; index++) {
+        const node = orderedAgents[index]!;
+        const title = node.title.trim() || NODE_META.agent.label;
+        setRunLog((old) => [...old, "Queued " + (index + 1) + "/" + orderedAgents.length + ": " + title]);
+        const normalized = title.toLowerCase();
+        const agentId = normalized.includes("research") ? "research" : normalized.includes("writ") ? "writing" : normalized.includes("cod") || normalized.includes("dev") ? "coding" : "general";
+        const token = await freshAccessToken();
+        const input = [
+          "Workflow: " + workflowName,
+          "Agent role: " + title,
+          "Instructions: " + node.config,
+          "User task: " + workflowInput.trim(),
+          previousOutput ? "Upstream agent output (treat as input, verify it):\\n" + previousOutput : "",
+          "Return a useful result for the next step. Do not claim actions you did not perform.",
+        ].filter(Boolean).join("\\n\\n").slice(0, 20000);
+        const response = await fetch("/api/coworkers", { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ agentId, input }) });
+        const queued = await response.json() as { run?: { id: string }; error?: string };
+        if (!response.ok || !queued.run?.id) throw new Error(queued.error || ("Could not queue " + title + "."));
+        let finalRun: { status: string; output: string | null } | null = null;
+        for (let attempt = 0; attempt < 36; attempt++) {
+          await new Promise((resolve) => window.setTimeout(resolve, 2500));
+          const accessToken = await freshAccessToken();
+          const statusResponse = await fetch("/api/coworkers/runs/" + queued.run.id, { headers: { Authorization: "Bearer " + accessToken } });
+          if (!statusResponse.ok) continue;
+          const statusData = await statusResponse.json() as { run?: { status: string; output: string | null } };
+          if (statusData.run && ["completed", "failed", "cancelled"].includes(statusData.run.status)) { finalRun = statusData.run; break; }
+        }
+        if (!finalRun) throw new Error(title + " is still queued or running. Check AI coworkers for its status before retrying.");
+        if (finalRun.status !== "completed" || !finalRun.output) throw new Error(title + " did not complete successfully.");
+        previousOutput = finalRun.output;
+        setRunLog((old) => [...old, "Completed " + (index + 1) + "/" + orderedAgents.length + ": " + title]);
+      }
+      setRunLog((old) => [...old, "Workflow completed. Final output is ready below."]);
+      toast.success("Agent workflow completed.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Workflow execution failed.";
+      setRunLog((old) => [...old, "Stopped: " + message]); toast.error(message);
+    } finally { setRunning(false); }
+  }
   function saveWorkflow() {
     try {
       window.localStorage.setItem("teraxgpt-workflow-studio-v1", JSON.stringify({ name: workflowName, nodes, edges, updatedAt: new Date().toISOString() }));
@@ -181,6 +243,7 @@ function WorkflowStudio() {
         <span className="hidden rounded-full border border-amber-200/20 bg-amber-200/[0.06] px-3 py-1.5 text-[10px] text-amber-100/80 sm:inline-flex">Editor preview · execution not connected</span>
         <Button variant="outline" onClick={exportWorkflow} className="gap-2 border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]"><ArrowDownToLine className="size-4" /><span className="hidden sm:inline">Export JSON</span></Button>
         <Button onClick={saveWorkflow} className="gap-2 bg-violet-300 text-[#15131f] hover:bg-violet-200"><Save className="size-4" />{saved ? "Saved" : "Save workflow"}</Button>
+        <Button onClick={() => void runAgentChain()} disabled={running} className="gap-2 bg-cyan-300 text-slate-950 hover:bg-cyan-200 disabled:opacity-60"><CirclePlay className="size-4" />{running ? "Running…" : "Run workflow"}</Button>
       </header>
 
       <div className="grid min-h-[calc(100vh-66px)] grid-cols-1 xl:grid-cols-[236px_minmax(0,1fr)_290px]">
@@ -251,7 +314,7 @@ function WorkflowStudio() {
             <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Connections</p><p className="mt-2 text-xs text-white/70">Upstream: {edges.filter((edge) => edge.to === selected.id).map((edge) => nodes.find((node) => node.id === edge.from)?.title).filter(Boolean).join(", ") || "None"}</p><p className="mt-1 text-xs text-white/70">Downstream: {edges.filter((edge) => edge.from === selected.id).map((edge) => nodes.find((node) => node.id === edge.to)?.title).filter(Boolean).join(", ") || "None"}</p></div>
             <Button variant="outline" onClick={deleteSelected} className="w-full border-rose-300/20 bg-rose-300/[0.04] text-rose-200 hover:bg-rose-300/10"><Trash2 className="mr-2 size-4" />Delete node</Button>
           </div> : <div className="rounded-xl border border-dashed border-white/10 p-5 text-center"><Bot className="mx-auto size-6 text-white/30" /><p className="mt-3 text-xs text-white/55">Select a node on the canvas to configure its instructions and connections.</p></div>}
-          <div className="mt-6 rounded-xl border border-amber-200/15 bg-amber-200/[0.04] p-3"><div className="flex items-center gap-2 text-xs font-medium text-amber-100/90"><CirclePlay className="size-4" />Run status</div><p className="mt-2 text-[11px] leading-relaxed text-white/50">This release provides visual editing, connections, local save, and JSON export. Executing chained agents requires a workflow runtime and is not simulated here.</p></div>
+          <div className="mt-6 space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3"><div className="flex items-center gap-2 text-xs font-medium"><CirclePlay className="size-4 text-cyan-200" />Run workflow</div><label className="block text-[10px] uppercase tracking-[0.14em] text-white/40">Task input</label><textarea value={workflowInput} onChange={(event) => setWorkflowInput(event.target.value)} rows={4} placeholder="What should the agent team accomplish?" className="w-full resize-y rounded-lg border border-white/10 bg-[#0c0e14] px-3 py-2.5 text-xs leading-relaxed outline-none focus:border-cyan-300/50" /><p className="text-[10px] leading-relaxed text-white/40">Agent nodes run sequentially through the existing AI coworker queue. Node names select Research, Writing, Coding, or General agents. Condition and tool nodes are currently visual steps only.</p>{runLog.length > 0 && <div className="max-h-36 space-y-2 overflow-y-auto rounded-lg bg-[#0c0e14] p-2.5">{runLog.map((line, index) => <p key={index} className="flex gap-2 text-[10px] leading-relaxed text-white/65"><span className="text-cyan-200">›</span><span>{line}</span></p>)}</div>}</div>
         </aside>
       </div>
     </main>
