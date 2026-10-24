@@ -43,6 +43,14 @@ TeraXGPT brings chat, model selection, web research, image generation, saved con
 - Markdown and code-oriented response rendering.
 - Conversation history, projects, agents, skills, saved personalization/context, and the AI Coworkers task workspace. See [AI Coworkers setup and limits](docs/AI_COWORKERS.md).
 
+### PowerPoint generation
+- **Prompt-triggered presentations:** ask naturally for a PowerPoint, PPT, slide deck, or presentation in the chat composer; no separate generation button is required.
+- **Gemini-powered slide planning:** the authenticated `/api/presentations` route uses Gemini to create a structured deck, slide copy, theme colors, and speaker notes.
+- **Real editable PowerPoint output:** TeraXGPT packages the generated slides into a downloadable `.pptx` file.
+- **In-chat preview:** browse slides, enlarge a slide preview, inspect speaker notes, and refine the deck with another natural-language instruction.
+- **Configuration:** set the server-only `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) in the deployment environment. Do not expose it through a `VITE_*` variable. Generation requires an authenticated session and Gemini API access.
+- **Current limits:** this is a text-first slide renderer, not a full PowerPoint design engine; embedded stock imagery, arbitrary chart rendering, and exact visual parity with Gemini's native presentation experiences are not guaranteed. Verify the downloaded file in PowerPoint or LibreOffice before presenting.
+
 ### Research and multimodal tools
 - **Deep Research mode:** research-oriented prompting, web search, source reading, source cross-checking, and citation guidance.
 - **Image generation:** server-side image generation tool when configured and enabled.
