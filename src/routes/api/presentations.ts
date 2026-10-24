@@ -102,26 +102,60 @@ function buildPptx(deck: Deck) {
 }
 
 async function generateDeck(prompt: string, slideCount: number, audience: string, style: string, signal: AbortSignal): Promise<Deck> {
-  const apiKey = process.env["GEMINI_API_KEY"] || process.env["GOOGLE_API_KEY"];
-  if (!apiKey) throw new Error("PowerPoint generation needs GEMINI_API_KEY configured on the server.");
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+  // Use the same server-side AI Gateway credentials as chat. Gemini is already
+  // available through this gateway, so this feature does not need a second API key.
+  const apiKey = process.env["LOVABLE_API_KEY"];
+  if (!apiKey) throw new Error("AI is not configured. Set LOVABLE_API_KEY on the server.");
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "Lovable-API-Key": apiKey,
+      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+    },
     signal,
     body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: `Create a high-quality PowerPoint presentation based on this request. Return ONLY valid JSON with this shape: {"title":string,"subtitle":string,"theme":{"background":"#RRGGBB","foreground":"#RRGGBB","accent":"#RRGGBB","muted":"#RRGGBB"},"slides":[{"title":string,"subtitle":string,"bullets":string[],"layout":"title"|"content"|"closing","speakerNotes":string}]}. Make exactly ${slideCount} slides including a title slide and a concise closing slide. Audience: ${audience || "general professional audience"}. Visual style: ${style}. Keep bullets concise, concrete, and useful; normally 3–5 bullets per content slide. Create a coherent narrative, strong titles, meaningful examples, and a clear takeaway. Do not invent precise statistics or citations; qualify assumptions and add sources to slide bullets when the topic needs current facts. User request: ${prompt}` }] }],
-      generationConfig: { responseMimeType: "application/json", temperature: 0.45, maxOutputTokens: 9000 },
+      model: "google/gemini-3.8-flash",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert presentation designer. Return only valid JSON, with no markdown fences or commentary.",
+        },
+        {
+          role: "user",
+          content: `Create a high-quality PowerPoint presentation based on this request. Return ONLY valid JSON with this shape: {"title":string,"subtitle":string,"theme":{"background":"#RRGGBB","foreground":"#RRGGBB","accent":"#RRGGBB","muted":"#RRGGBB"},"slides":[{"title":string,"subtitle":string,"bullets":string[],"layout":"title"|"content"|"closing","speakerNotes":string}]}. Make exactly ${slideCount} slides including a title slide and a concise closing slide. Audience: ${audience || "general professional audience"}. Visual style: ${style}. Keep bullets concise, concrete, and useful; normally 3–5 bullets per content slide. Create a coherent narrative, strong titles, meaningful examples, and a clear takeaway. Do not invent precise statistics or citations; qualify assumptions and add sources to slide bullets when the topic needs current facts. User request: ${prompt}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.45,
+      max_tokens: 9000,
     }),
   });
+
   if (!response.ok) {
     const details = await response.text().catch(() => "");
-    throw new Error(response.status === 429 ? "Gemini rate limit reached. Try again shortly." : `Gemini returned HTTP ${response.status}: ${details.slice(0, 300)}`);
+    if (response.status === 429) throw new Error("Gemini rate limit reached. Try again shortly.");
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("The AI Gateway rejected the request. Check the server's LOVABLE_API_KEY configuration.");
+    }
+    throw new Error(`Gemini via AI Gateway returned HTTP ${response.status}: ${details.slice(0, 300)}`);
   }
-  const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  const raw = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+
+  const payload = await response.json() as {
+    choices?: Array<{ message?: { content?: string | Array<{ type?: string; text?: string }> } }>;
+  };
+  const content = payload.choices?.[0]?.message?.content;
+  const raw = typeof content === "string"
+    ? content
+    : Array.isArray(content)
+      ? content.map((part) => part.text ?? "").join("")
+      : "";
   let parsed: unknown;
-  try { parsed = JSON.parse(raw.replace(/^\`\`\`(?:json)?\s*/i, "").replace(/\s*\`\`\`$/, "")); }
+  try { parsed = JSON.parse(raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); }
   catch { throw new Error("Gemini returned an invalid slide outline. Please try the request again."); }
+
   const shape = z.object({
     title: z.string().min(1).max(160),
     subtitle: z.string().max(300).default(""),
