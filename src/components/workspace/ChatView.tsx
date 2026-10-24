@@ -1158,7 +1158,7 @@ export function ChatView({
                     style={{ animationDelay: "0.36s" }}
                   />
                 </span>
-                <span>{status === "submitted" ? "Thinking…" : `${activeModelLabel} is responding…`}</span>
+                <span>{presentationGenerating ? "Gemini is building your PowerPoint and preparing the slide preview…" : status === "submitted" ? "Thinking…" : `${activeModelLabel} is responding…`}</span>
               </div>
             )}
 
