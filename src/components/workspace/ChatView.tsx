@@ -613,7 +613,7 @@ export function ChatView({
           convId = created.id; conversationRef.current = convId; onConversationCreated(convId, text.slice(0, 60) || "PowerPoint presentation");
         }
         const token = await freshAccessToken();
-        const response = await fetch("/api/presentations", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ prompt: text, slideCount: 10, style: "modern" }) });
+        const response = await fetch("/api/presentations", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ prompt: text, slideCount: Math.max(4, Math.min(20, Number(text.match(/\b(\d{1,2})\s*(?:slides?|pages?)\b/i)?.[1] ?? 10))), style: "modern" }) });
         const payload = await response.json() as PresentationResult & { error?: string };
         if (!response.ok) throw new Error(payload.error || "Could not create the PowerPoint.");
         const userMessageId = crypto.randomUUID();
