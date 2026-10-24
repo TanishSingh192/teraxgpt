@@ -1248,7 +1248,7 @@ export function ChatView({
             <p className="mt-2 text-center text-[10px] text-subtle">TeraX CPT can make mistakes. Check important information.</p>
           </div>
         </div>
-        {githubDevelopmentOpen && <GitHubDevelopment onClose={() => setGithubDevelopmentOpen(false)} onUseContext={(prompt) => setInput((current) => current.trim() ? current + "\\n\\n" + prompt : prompt)} />}
+        {githubDevelopmentOpen && <GitHubDevelopment onClose={() => setGithubDevelopmentOpen(false)} onUseContext={(prompt) => setInput((current) => current.trim() ? current + "\n\n" + prompt : prompt)} />}
         {canvasStudioOpen && <CanvasStudio onClose={() => setCanvasStudioOpen(false)} onUsePrompt={(prompt, file) => { setFiles((current) => [...current, file]); setInput(prompt); }} />}
         {documentStudioOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDocumentStudioOpen(false); }}>
