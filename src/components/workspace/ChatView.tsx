@@ -626,10 +626,10 @@ export function ChatView({
     const userId = auth.user?.id;
     if (!userId) return;
 
-    const presentationIntent = /\\b(?:ppt|pptx|power\\s*point|presentation|slide deck|slides?)\\b/i.test(text) && (
-      /\\b(?:make|create|generate|build|prepare|design|draft|put together|turn .* into|convert .* to)\\b/i.test(text) ||
-      /\\b(?:i need|i have to|i want|i have|can you|could you|please|help me|need to)\\b/i.test(text) ||
-      /\\b(?:about|on|for|covering|explaining|regarding)\\b/i.test(text)
+    const presentationIntent = /\b(?:ppt|pptx|power\s*point|presentation|slide deck|slides?)\b/i.test(text) && (
+      /\b(?:make|create|generate|build|prepare|design|draft|put together|turn .* into|convert .* to)\b/i.test(text) ||
+      /\b(?:i need|i have to|i want|i have|can you|could you|please|help me|need to)\b/i.test(text) ||
+      /\b(?:about|on|for|covering|explaining|regarding)\b/i.test(text)
     );
     if (presentationIntent) {
       if (engineRef.current === "agno") { toast.error("PowerPoint generation currently requires the TeraXGPT engine, not Agno AgentOS."); return; }
