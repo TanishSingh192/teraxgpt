@@ -1,0 +1,14 @@
+CREATE TABLE public.coworker_runs (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE, conversation_id UUID REFERENCES public.conversations(id) ON DELETE SET NULL, agent_id TEXT NOT NULL CHECK (agent_id IN ('general','research','writing','coding')), input TEXT NOT NULL, output TEXT, status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','running','completed','failed','cancelled')), error_code TEXT, attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0), created_at TIMESTAMPTZ NOT NULL DEFAULT now(), started_at TIMESTAMPTZ, finished_at TIMESTAMPTZ, updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE INDEX coworker_runs_user_created_idx ON public.coworker_runs(user_id, created_at DESC);
+CREATE INDEX coworker_runs_queue_idx ON public.coworker_runs(status, created_at ASC) WHERE status = 'queued';
+CREATE TABLE public.coworker_events (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), run_id UUID NOT NULL REFERENCES public.coworker_runs(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE, event_type TEXT NOT NULL, event_data JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE INDEX coworker_events_run_created_idx ON public.coworker_events(run_id, created_at ASC);
+ALTER TABLE public.coworker_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.coworker_events ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT ON public.coworker_runs TO authenticated;
+GRANT SELECT ON public.coworker_events TO authenticated;
+GRANT ALL ON public.coworker_runs TO service_role;
+GRANT ALL ON public.coworker_events TO service_role;
+CREATE POLICY "users read own coworker runs" ON public.coworker_runs FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "users enqueue own coworker runs" ON public.coworker_runs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "users read own coworker events" ON public.coworker_events FOR SELECT TO authenticated USING (auth.uid() = user_id);
