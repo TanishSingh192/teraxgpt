@@ -94,7 +94,7 @@ async function rpc(endpoint: string, token: string | undefined, message: JsonRpc
     const stream = await response.text();
     const data = stream.split("\\n").filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).filter(Boolean);
     const messages = data.map((item) => { try { return JSON.parse(item) as { id?: unknown }; } catch { return null; } }).filter(Boolean);
-    const matching = messages.findLast((item) => item && item.id === message.id);
+    const matching = [...messages].reverse().find((item) => item && item.id === message.id);
     const selected = matching ?? messages.at(-1);
     if (!selected) throw new Error("MCP server returned an empty or invalid event stream.");
     payload = selected;
