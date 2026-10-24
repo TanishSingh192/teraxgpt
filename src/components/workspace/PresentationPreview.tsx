@@ -27,7 +27,7 @@ export function PresentationPreview({ result, onRefine, busy = false }: { result
     const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }));
     const link = document.createElement("a");
     link.href = url; link.download = result.fileName; document.body.appendChild(link); link.click(); link.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   if (!slide) return null;
   return <section className="mt-5 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm" aria-label="Generated PowerPoint">
