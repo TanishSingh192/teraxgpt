@@ -10,8 +10,10 @@ export type PresentationDeck = {
 };
 export type PresentationResult = { deck: PresentationDeck; pptxBase64: string; fileName: string; provider: string };
 
-export function PresentationPreview({ result }: { result: PresentationResult }) {
+export function PresentationPreview({ result, onRefine, busy = false }: { result: PresentationResult; onRefine: (instruction: string) => void; busy?: boolean }) {
   const [active, setActive] = useState(0);
+  const [refinement, setRefinement] = useState("");
+  const [showNotes, setShowNotes] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const slide = result.deck.slides[active];
   const bg = result.deck.theme.background || "#10182B";
@@ -45,6 +47,15 @@ export function PresentationPreview({ result }: { result: PresentationResult }) 
           <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[10px] text-white opacity-0 transition group-hover:opacity-100"><Maximize2 className="size-3" /> Preview</div>
         </div>
       </button>
+      {slide.speakerNotes && <div className="mt-3 rounded-lg border border-line">
+        <button type="button" className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-subtle hover:text-ink" onClick={() => setShowNotes((value) => !value)} aria-expanded={showNotes}>Speaker notes <span>{showNotes ? "Hide −" : "Show +"}</span></button>
+        {showNotes && <p className="whitespace-pre-wrap px-3 pb-3 text-sm leading-relaxed">{slide.speakerNotes}</p>}
+      </div>}
+      <form className="mt-4 flex flex-col gap-2 rounded-xl border border-line bg-background/50 p-3 sm:flex-row" onSubmit={(event) => { event.preventDefault(); if (!refinement.trim() || busy) return; onRefine(refinement.trim()); setRefinement(""); }}>
+        <input value={refinement} onChange={(event) => setRefinement(event.target.value)} placeholder="Refine this deck: make it more visual, add examples, change the tone…" aria-label="Presentation refinement instruction" className="min-w-0 flex-1 rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
+        <Button type="submit" disabled={busy || !refinement.trim()}>{busy ? "Updating…" : "Refine deck"}</Button>
+      </form>
+      <p className="mt-2 text-[10px] text-subtle">Describe changes in natural language. The deck is regenerated and the downloadable PowerPoint is replaced with the revised version.</p>
       <div className="mt-3 flex items-center gap-3">
         <Button variant="outline" size="icon" disabled={active===0} onClick={() => setActive((v)=>Math.max(0,v-1))} aria-label="Previous slide"><ChevronLeft className="size-4" /></Button>
         <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto py-1">{result.deck.slides.map((item,index)=><button type="button" key={index} onClick={()=>setActive(index)} aria-label={`View slide ${index+1}: ${item.title}`} className={`w-24 shrink-0 rounded-lg border p-2 text-left transition sm:w-32 ${active===index?"border-indigo-500 bg-indigo-500/10":"border-line hover:bg-background"}`}><span className="block text-[9px] text-subtle">SLIDE {String(index+1).padStart(2,"0")}</span><span className="mt-1 block truncate text-[11px] font-medium">{item.title}</span></button>)}</div>
