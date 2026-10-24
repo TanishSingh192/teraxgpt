@@ -32,7 +32,7 @@ import {
 import { toast } from "sonner";
 
 import { Markdown } from "@/components/workspace/Markdown";
-import { CodeWorkspace } from "@/components/workspace/CodeWorkspace";
+import { CodeWorkspace, type WorkspaceFile } from "@/components/workspace/CodeWorkspace";
 import { RealtimeVoicePanel } from "@/components/workspace/RealtimeVoicePanel";
 import { CoworkerWorkspace } from "@/components/workspace/CoworkerWorkspace";
 import { Button } from "@/components/ui/button";
@@ -138,6 +138,24 @@ function documentHtml(title: string, markdown: string) {
 </head><body>${markdownToDocumentHtml(markdown)}</body></html>`;
 }
 
+function extractProjectFiles(source: string, fallbackCode: string, fallbackLanguage: string): WorkspaceFile[] {
+  const blocks: WorkspaceFile[] = [];
+  const fence = /```([^\n`]*)\n([\s\S]*?)```/g;
+  let match: RegExpExecArray | null;
+  let index = 0;
+  while ((match = fence.exec(source)) !== null) {
+    const info = (match[1] ?? "").trim();
+    let content = (match[2] ?? "").replace(/\n$/, "");
+    const language = (info.match(/^[\w+#.-]+/)?.[0] ?? fallbackLanguage ?? "text").toLowerCase();
+    let name = info.match(/(?:file(?:name)?|path)\s*=\s*["\u0027]?([^\s"\u0027]+)/i)?.[1] ?? info.match(/(?:^|\s)([\w./-]+\.(?:tsx?|jsx?|html?|css|json|md|ya?ml|sh|py|rs|go|java|sql))\s*$/i)?.[1];
+    if (!name) { const first = content.match(/^\s*(?:\/\/|#|<!--)\s*(?:file:\s*)?([\w./-]+\.(?:tsx?|jsx?|html?|css|json|md|ya?ml|sh|py|rs|go|java|sql))\s*(?:-->)?\s*\n/i); if (first) { name = first[1]; content = content.slice(first[0].length); } }
+    if (!name) { const before = source.slice(Math.max(0, match.index - 180), match.index); name = before.match(/(?:^|\n)\s{0,3}#{1,4}\s+(?:file:\s*)?[`*]*([\w./-]+\.(?:tsx?|jsx?|html?|css|json|md|ya?ml|sh|py|rs|go|java|sql))[`*]*\s*\n?\s*$/i)?.[1]; }
+    if (!name) { const ext = language === "javascript" ? "js" : language === "typescript" ? "ts" : language === "html" ? "html" : language === "css" ? "css" : language || "txt"; name = index === 0 ? (language === "html" ? "index.html" : language === "css" ? "styles.css" : language === "javascript" || language === "js" ? "app.js" : "main." + ext) : "file-" + (index + 1) + "." + ext; }
+    if (blocks.some((file) => file.name === name)) name = name.replace(/(\.[^./]+)?$/, (_all, ext) => "-" + (index + 1) + (ext ?? ""));
+    blocks.push({ name, language, content }); index++;
+  }
+  return blocks.length ? blocks : [{ name: fallbackLanguage === "html" ? "index.html" : fallbackLanguage === "css" ? "styles.css" : fallbackLanguage === "javascript" || fallbackLanguage === "js" ? "app.js" : "main." + (fallbackLanguage || "txt"), language: fallbackLanguage || "text", content: fallbackCode }];
+}
 function textOf(message: AppMessage) {
   return message.parts
     .filter((p): p is { type: "text"; text: string } => p.type === "text")
@@ -230,7 +248,7 @@ export function ChatView({
   const [modelId, setModelId] = useState<string>(AUTO);
   const [engine, setEngine] = useState<"standard" | "agno">("standard");
   const [input, setInput] = useState("");
-  const [codeWorkspace, setCodeWorkspace] = useState<{ code: string; language: string; messageId: string } | null>(null);
+  const [codeWorkspace, setCodeWorkspace] = useState<{ code: string; language: string; files: WorkspaceFile[]; messageId: string } | null>(null);
   const [documentStudioOpen, setDocumentStudioOpen] = useState(false);
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentType, setDocumentType] = useState("report");
@@ -964,7 +982,7 @@ export function ChatView({
                       </div>
                     ))}
                     {textOf(message).trim() ? (
-                      <Markdown onOpenInIDE={(code, language) => setCodeWorkspace({ code, language, messageId: message.id })}>{textOf(message)}</Markdown>
+                      <Markdown onOpenInIDE={(code, language) => setCodeWorkspace({ code, language, files: extractProjectFiles(textOf(message), code, language), messageId: message.id })}>{textOf(message)}</Markdown>
                     ) : busy && message.id === messages[messages.length - 1]?.id ? (
                       <div className="flex items-center gap-2 py-2 text-sm text-subtle" role="status" aria-live="polite">
                         <span className="terax-thinking-dots flex items-center gap-1" aria-hidden="true"><i /><i /><i /></span>
@@ -975,6 +993,7 @@ export function ChatView({
                       <CodeWorkspace
                         initialCode={codeWorkspace.code}
                         language={codeWorkspace.language}
+                        initialFiles={codeWorkspace.files}
                         onClose={() => setCodeWorkspace(null)}
                       />
                     )}
