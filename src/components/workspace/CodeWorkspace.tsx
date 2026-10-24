@@ -13,11 +13,6 @@ type CodeWorkspaceProps = {
 
 const WEB_LANGUAGES = new Set(["html", "htm", "css", "javascript", "js"]);
 
-function languageFor(name: string) {
-  const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  return ({ html: "html", htm: "html", css: "css", js: "javascript", jsx: "jsx", ts: "typescript", tsx: "tsx", json: "json", md: "markdown" } as Record<string, string>)[ext] ?? ext || "text";
-}
-
 function escapeInlineScript(code: string) {
   return code.replace(/<\/script/gi, "<\\/script");
 }
