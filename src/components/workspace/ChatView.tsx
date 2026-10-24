@@ -274,6 +274,7 @@ export function ChatView({
   const conversationRef = useRef<string | null>(conversationId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
   const recorderRef = useRef<{ stop: () => Promise<File>; cancel: () => void } | null>(null);
   const speechRef = useRef<AbortController | null>(null);
 
@@ -461,7 +462,10 @@ export function ChatView({
   });
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    const container = scrollRef.current;
+    if (!container || !shouldAutoScrollRef.current) return;
+    // Avoid repeated smooth-scroll animations while a response streams.
+    container.scrollTop = container.scrollHeight;
   }, [messages]);
 
   const busy = status === "submitted" || status === "streaming";
@@ -518,11 +522,16 @@ export function ChatView({
   async function handleSend(overrideText?: string) {
     const text = (overrideText ?? input).trim();
     if ((!text && files.length === 0) || busy) return;
+    // Attach long pasted prompts as Markdown to preserve their structure.
+    const longPrompt = engineRef.current !== "agno" && text.length >= 1400;
+    const promptFile = longPrompt ? new File([text + (text.endsWith(String.fromCharCode(10)) ? "" : String.fromCharCode(10))], "prompt.md", { type: "text/markdown" }) : null;
+    const outgoingFiles = promptFile ? [...files, promptFile] : files;
+    const outgoingText = promptFile ? "Use the attached prompt.md as the complete task specification. Preserve its headings, constraints, and acceptance criteria." : text;
     if (engineRef.current === "agno" && temporaryChatRef.current) {
       toast.error("Agno AgentOS mode requires a saved conversation. Turn off Temporary Chat or switch to TeraXGPT.");
       return;
     }
-    if (engineRef.current === "agno" && files.length > 0) {
+    if (engineRef.current === "agno" && outgoingFiles.length > 0) {
       toast.error("Agno AgentOS mode currently supports text-only prompts. Switch to TeraXGPT to use attachments.");
       return;
     }
@@ -535,8 +544,8 @@ export function ChatView({
     if (temporaryChat) {
       conversationRef.current = null;
       const dataTransfer = new DataTransfer();
-      files.forEach((file) => dataTransfer.items.add(file));
-      void sendMessage(files.length ? { text, files: dataTransfer.files } : { text });
+      outgoingFiles.forEach((file) => dataTransfer.items.add(file));
+      void sendMessage(outgoingFiles.length ? { text: outgoingText, files: dataTransfer.files } : { text: outgoingText });
       setInput("");
       setFiles([]);
       return;
@@ -568,15 +577,16 @@ export function ChatView({
       role: "user",
       content: [
         { type: "text", text },
-        ...files.map((f) => ({ type: "file", name: f.name, mediaType: f.type })),
+        ...outgoingFiles.map((f) => ({ type: "file", name: f.name, mediaType: f.type })),
       ],
     });
 
     const dataTransfer = new DataTransfer();
-    files.forEach((file) => dataTransfer.items.add(file));
-    void sendMessage(files.length ? { text, files: dataTransfer.files } : { text });
+    outgoingFiles.forEach((file) => dataTransfer.items.add(file));
+    void sendMessage(outgoingFiles.length ? { text: outgoingText, files: dataTransfer.files } : { text: outgoingText });
     setInput("");
     setFiles([]);
+    if (promptFile) toast.info("Long prompt attached as prompt.md");
   }
 
   const activeModelLabel = modelId === AUTO ? "Auto" : getModel(modelId).label;
@@ -732,7 +742,7 @@ export function ChatView({
           </div>
         </header>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-44 pt-8 md:px-8">
+        <div ref={scrollRef} onScroll={(event) => { const el = event.currentTarget; shouldAutoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120; }} className="flex-1 overflow-y-auto px-4 pb-44 pt-8 md:px-8">
           <div className={messages.length === 0 ? "mx-auto w-full max-w-[1160px]" : "mx-auto max-w-[760px]"}>
             {messages.length === 0 && (
               <section className="terax-launch relative isolate flex min-h-[min(700px,76vh)] flex-col justify-center overflow-hidden rounded-[28px] px-4 py-8 sm:px-8 sm:py-10 lg:px-12">
