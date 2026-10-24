@@ -95,6 +95,16 @@ const CAPABILITY_PROMPTS = [
   { label: "Data analysis", prompt: "Analyze this data and " },
 ];
 
+function downloadPromptMarkdown(text: string) {
+  const blob = new Blob([text.endsWith("\\n") ? text : text + "\\n"], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "prompt.md";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function escapeHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
@@ -1086,6 +1096,16 @@ export function ChatView({
                 </div>
               )}
 
+              {input.length >= 1400 && (
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-signal/25 bg-signal-soft/60 px-3 py-2.5">
+                  <span className="grid size-7 place-items-center rounded-lg bg-signal/15 text-signal"><FileText className="size-4" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-medium text-ink">Markdown file ready · prompt.md</p>
+                    <p className="text-[11px] text-subtle">{input.length.toLocaleString()} characters will be attached automatically when you send.</p>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 text-[11px]" onClick={() => downloadPromptMarkdown(input)}><Download className="size-3.5" /> Download .md</Button>
+                </div>
+              )}
               <div className="flex items-end gap-2">
                 <div className="flex items-center gap-1">
                   <input
