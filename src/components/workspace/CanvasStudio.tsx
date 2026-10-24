@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Download, Eraser, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function CanvasStudio({ onClose, onUsePrompt }: { onClose: () => void; onUsePrompt: (prompt: string) => void }) {
+export function CanvasStudio({ onClose, onUsePrompt }: { onClose: () => void; onUsePrompt: (prompt: string, file: File) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const [color, setColor] = useState("#6d5dfc");
@@ -48,7 +48,7 @@ export function CanvasStudio({ onClose, onUsePrompt }: { onClose: () => void; on
         <Button variant="outline" size="sm" onClick={clear}><Eraser /> Clear</Button>
         <Button variant="outline" size="sm" onClick={download}><Download /> Export PNG</Button>
         <div className="flex-1" />
-        <Button size="sm" onClick={() => { onUsePrompt("Use this sketch as the visual reference for my next task. Help me interpret and develop it."); onClose(); }}>Use in chat</Button>
+        <Button size="sm" onClick={() => { const canvas = canvasRef.current; if (!canvas) return; canvas.toBlob((blob) => { if (!blob) return; onUsePrompt("Use the attached canvas sketch as the visual reference for my next task. Help me interpret and develop it.", new File([blob], "canvas-sketch.png", { type: "image/png" })); onClose(); }, "image/png"); }}>Attach sketch to chat</Button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto bg-[#f7f8fc] p-3 sm:p-5"><canvas ref={canvasRef} width={1600} height={900} onPointerDown={start} onPointerMove={move} onPointerUp={() => { drawing.current = false; }} onPointerCancel={() => { drawing.current = false; }} onPointerLeave={() => { drawing.current = false; }} aria-label="Drawing canvas" className="mx-auto block h-auto w-full max-w-5xl touch-none rounded-xl border border-slate-200 bg-white shadow-sm" /></div>
     </section>
