@@ -10,6 +10,14 @@ This document distinguishes shipped foundations from future work. TeraXGPT is no
 - **MCP connectors:** configure remote HTTPS MCP servers in Settings → Connectors. Credentials use server-side encryption; discovered tool calls require approval.
 - **AI coworkers MVP:** the chat workspace includes a specialist task panel with General, Research, Writing, and Coding profiles; queued runs, persistent status/events, result history, and cancellation. Apply `supabase/migrations/202610220001_coworker_runs.sql` and configure the scheduled worker as documented in [AI Coworkers](AI_COWORKERS.md). The Research profile uses the configured web search/page-reader tools; other profiles are text-only.
 
+## PowerPoint generation
+
+- Natural-language intent detection in chat routes presentation requests to the dedicated server endpoint; no separate composer button is required.
+- The endpoint authenticates the user's Supabase session, asks Gemini for a validated slide outline, builds a downloadable Office Open XML `.pptx`, and returns the slide data for an in-chat preview.
+- The preview supports slide navigation, enlarged view, speaker notes, download, and prompt-driven deck regeneration.
+- Configure `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) as a server-only deployment secret. No database migration is required for generation. If the secret is missing or the provider rejects the request, generation returns an error rather than a fake deck.
+- The current renderer is primarily text-and-shape based. Embedded imagery, rich chart types, long-term persistence of the binary deck, and cross-browser presentation QA remain future improvements.
+
 ## Deployment
 
 1. Apply `drizzle/migrations/0006_create_user_plugin_settings.sql` after the existing MCP connector migration.
