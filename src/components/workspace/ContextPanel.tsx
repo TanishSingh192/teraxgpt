@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Archive, BrainCircuit, FileText, Gauge, Layers3 } from "lucide-react";
+import { BrainCircuit, FileText, Gauge, Layers3 } from "lucide-react";
 import { getModel } from "@/lib/models";
 
 export type TurnInfo = {
