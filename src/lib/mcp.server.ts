@@ -53,7 +53,6 @@ export function validateMcpEndpoint(raw: string): URL {
     url.protocol !== "https:" ||
     url.username ||
     url.password ||
-    url.port ||
     host === "localhost" ||
     host.endsWith(".localhost") ||
     host.endsWith(".local") ||
@@ -85,21 +84,29 @@ async function rpc(endpoint: string, token: string | undefined, message: JsonRpc
     signal: AbortSignal.timeout(12_000),
     redirect: "error",
   });
-  if (!response.ok) throw new Error(`MCP server returned HTTP ${response.status}.`);
+  if (!response.ok) {
+    const detail = (await response.text().catch(() => "")).replace(/[\\r\\n\\t]+/g, " ").slice(0, 240);
+    throw new Error(`MCP server returned HTTP ${response.status}${detail ? `: ${detail}` : ""}`);
+  }
   const contentType = response.headers.get("content-type") ?? "";
   let payload: unknown;
   if (contentType.includes("text/event-stream")) {
-    const text = await response.text();
-    const data = text.split("\n").filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).filter(Boolean);
-    const last = data.at(-1);
-    if (!last) throw new Error("MCP server returned an empty event stream.");
-    payload = JSON.parse(last);
+    const stream = await response.text();
+    const data = stream.split("\\n").filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).filter(Boolean);
+    const messages = data.map((item) => { try { return JSON.parse(item) as { id?: unknown }; } catch { return null; } }).filter(Boolean);
+    const matching = messages.findLast((item) => item && item.id === message.id);
+    const selected = matching ?? messages.at(-1);
+    if (!selected) throw new Error("MCP server returned an empty or invalid event stream.");
+    payload = selected;
   } else {
-    payload = await response.json();
+    const raw = await response.text();
+    try { payload = JSON.parse(raw) as unknown; }
+    catch { throw new Error(`MCP server returned non-JSON content (${contentType || "unknown content type"}). Check that the URL is the MCP endpoint, not a website.`); }
   }
-  const result = payload as { result?: unknown; error?: { message?: string } };
-  if (result.error) throw new Error(result.error.message ?? "MCP request failed.");
-  return { payload: result.result, sessionId: response.headers.get("mcp-session-id") ?? sessionId };
+  const envelope = payload as { result?: unknown; error?: { code?: number; message?: string }; id?: unknown };
+  if (envelope.error) throw new Error(`MCP protocol error${envelope.error.code !== undefined ? ` ${envelope.error.code}` : ""}: ${(envelope.error.message ?? "request failed").slice(0, 240)}`);
+  if (message.id !== undefined && envelope.id !== undefined && envelope.id !== message.id) throw new Error("MCP server returned a response for a different request ID.");
+  return { payload: envelope.result, sessionId: response.headers.get("mcp-session-id") ?? sessionId };
 }
 
 export async function listMcpTools(endpoint: string, token?: string): Promise<McpTool[]> {
