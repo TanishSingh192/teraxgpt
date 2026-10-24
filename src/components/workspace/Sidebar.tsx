@@ -11,6 +11,7 @@ import {
   Search,
   Settings,
   Trash2,
+  Workflow,
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -114,6 +115,10 @@ export function Sidebar({
         <Link to="/agents" onClick={onClose} className="mt-0.5 flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] text-subtle hover:bg-panel">
           <Bot className="size-3.5" />
           Agents
+        </Link>
+        <Link to="/workflows" onClick={onClose} className="mt-0.5 flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] text-subtle hover:bg-panel">
+          <Workflow className="size-3.5" />
+          Workflow builder
         </Link>
         <Link to="/settings" onClick={onClose} className="mt-0.5 flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] text-subtle hover:bg-panel">
           <Settings className="size-3.5" />
