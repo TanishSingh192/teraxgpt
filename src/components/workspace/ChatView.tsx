@@ -576,6 +576,7 @@ export function ChatView({
       void sendMessage(outgoingFiles.length ? { text: outgoingText, files: dataTransfer.files } : { text: outgoingText });
       setInput("");
       setFiles([]);
+      if (promptFile) toast.info("Long prompt attached as prompt.md");
       return;
     }
 
@@ -1096,7 +1097,7 @@ export function ChatView({
                 </div>
               )}
 
-              {input.length >= 1400 && (
+              {input.length >= 1400 && engine !== "agno" && (
                 <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-signal/25 bg-signal-soft/60 px-3 py-2.5">
                   <span className="grid size-7 place-items-center rounded-lg bg-signal/15 text-signal"><FileText className="size-4" /></span>
                   <div className="min-w-0 flex-1">
@@ -1104,6 +1105,13 @@ export function ChatView({
                     <p className="text-[11px] text-subtle">{input.length.toLocaleString()} characters will be attached automatically when you send.</p>
                   </div>
                   <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 text-[11px]" onClick={() => downloadPromptMarkdown(input)}><Download className="size-3.5" /> Download .md</Button>
+                </div>
+              )}
+              {input.length >= 1400 && engine === "agno" && (
+                <div className="mb-3 flex items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-3 py-2.5">
+                  <FileText className="size-4 shrink-0 text-amber-200" />
+                  <p className="min-w-0 flex-1 text-[11px] text-subtle">Agno AgentOS is text-only. This prompt will stay in the message rather than attach as a file.</p>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 shrink-0 text-[11px]" onClick={() => downloadPromptMarkdown(input)}><Download className="mr-1 size-3.5" /> .md</Button>
                 </div>
               )}
               <div className="flex items-end gap-2">
