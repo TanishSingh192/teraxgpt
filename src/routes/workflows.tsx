@@ -68,6 +68,7 @@ function WorkflowStudio() {
   const [workflowInput, setWorkflowInput] = useState("");
   const [running, setRunning] = useState(false);
   const [runLog, setRunLog] = useState<string[]>([]);
+  const [finalOutput, setFinalOutput] = useState("");
   const selected = nodes.find((node) => node.id === selectedId) ?? null;
 
   useEffect(() => {
@@ -159,7 +160,7 @@ function WorkflowStudio() {
     };
     nodes.forEach((node) => visit(node.id));
     const orderedAgents = ordered.filter((node) => node.kind === "agent");
-    setRunning(true); setRunLog([]);
+    setRunning(true); setRunLog([]); setFinalOutput("");
     let previousOutput = "";
     try {
       for (let index = 0; index < orderedAgents.length; index++) {
@@ -194,6 +195,7 @@ function WorkflowStudio() {
         previousOutput = finalRun.output;
         setRunLog((old) => [...old, "Completed " + (index + 1) + "/" + orderedAgents.length + ": " + title]);
       }
+      setFinalOutput(previousOutput);
       setRunLog((old) => [...old, "Workflow completed. Final output is ready below."]);
       toast.success("Agent workflow completed.");
     } catch (error) {
@@ -314,7 +316,8 @@ function WorkflowStudio() {
             <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Connections</p><p className="mt-2 text-xs text-white/70">Upstream: {edges.filter((edge) => edge.to === selected.id).map((edge) => nodes.find((node) => node.id === edge.from)?.title).filter(Boolean).join(", ") || "None"}</p><p className="mt-1 text-xs text-white/70">Downstream: {edges.filter((edge) => edge.from === selected.id).map((edge) => nodes.find((node) => node.id === edge.to)?.title).filter(Boolean).join(", ") || "None"}</p></div>
             <Button variant="outline" onClick={deleteSelected} className="w-full border-rose-300/20 bg-rose-300/[0.04] text-rose-200 hover:bg-rose-300/10"><Trash2 className="mr-2 size-4" />Delete node</Button>
           </div> : <div className="rounded-xl border border-dashed border-white/10 p-5 text-center"><Bot className="mx-auto size-6 text-white/30" /><p className="mt-3 text-xs text-white/55">Select a node on the canvas to configure its instructions and connections.</p></div>}
-          <div className="mt-6 space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3"><div className="flex items-center gap-2 text-xs font-medium"><CirclePlay className="size-4 text-cyan-200" />Run workflow</div><label className="block text-[10px] uppercase tracking-[0.14em] text-white/40">Task input</label><textarea value={workflowInput} onChange={(event) => setWorkflowInput(event.target.value)} rows={4} placeholder="What should the agent team accomplish?" className="w-full resize-y rounded-lg border border-white/10 bg-[#0c0e14] px-3 py-2.5 text-xs leading-relaxed outline-none focus:border-cyan-300/50" /><p className="text-[10px] leading-relaxed text-white/40">Agent nodes run sequentially through the existing AI coworker queue. Node names select Research, Writing, Coding, or General agents. Condition and tool nodes are currently visual steps only.</p>{runLog.length > 0 && <div className="max-h-36 space-y-2 overflow-y-auto rounded-lg bg-[#0c0e14] p-2.5">{runLog.map((line, index) => <p key={index} className="flex gap-2 text-[10px] leading-relaxed text-white/65"><span className="text-cyan-200">›</span><span>{line}</span></p>)}</div>}</div>
+          <div className="mt-6 space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3"><div className="flex items-center gap-2 text-xs font-medium"><CirclePlay className="size-4 text-cyan-200" />Run workflow</div><label className="block text-[10px] uppercase tracking-[0.14em] text-white/40">Task input</label><textarea value={workflowInput} onChange={(event) => setWorkflowInput(event.target.value)} rows={4} placeholder="What should the agent team accomplish?" className="w-full resize-y rounded-lg border border-white/10 bg-[#0c0e14] px-3 py-2.5 text-xs leading-relaxed outline-none focus:border-cyan-300/50" /><p className="text-[10px] leading-relaxed text-white/40">Agent nodes run sequentially through the existing AI coworker queue. Node names select Research, Writing, Coding, or General agents. Condition and tool nodes are currently visual steps only.</p>{runLog.length > 0 && <div className="max-h-36 space-y-2 overflow-y-auto rounded-lg bg-[#0c0e14] p-2.5">{runLog.map((line, index) => <p key={index} className="flex gap-2 text-[10px] leading-relaxed text-white/65"><span className="text-cyan-200">›</span><span>{line}</span></p>)}</div>}
+            {finalOutput && <div className="mt-3"><p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Final output</p><pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-emerald-200/15 bg-[#0c0e14] p-3 text-[11px] leading-relaxed text-emerald-50/80">{finalOutput}</pre></div>}</div>
         </aside>
       </div>
     </main>
