@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 type RepoFile = { path: string; type: string; size?: number };
 type RepoInfo = { full_name: string; description: string | null; default_branch: string; html_url: string; private: boolean };
 
-export function GitHubDevelopment({ onClose }: { onClose: () => void }) {
+export function GitHubDevelopment({ onClose, onUseContext }: { onClose: () => void; onUseContext: (prompt: string) => void }) {
   const [repoInput, setRepoInput] = useState("");
   const [repo, setRepo] = useState<RepoInfo | null>(null);
   const [files, setFiles] = useState<RepoFile[]>([]);
@@ -61,7 +61,7 @@ export function GitHubDevelopment({ onClose }: { onClose: () => void }) {
         <aside className="max-h-48 overflow-y-auto border-b border-line p-2 md:max-h-none md:border-b-0 md:border-r">{files.map((file) => <button type="button" key={file.path} onClick={() => void openFile(file.path)} className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs hover:bg-background ${selected === file.path ? "bg-background text-ink" : "text-subtle"}`}><FileCode2 className="size-3.5 shrink-0" /><span className="truncate">{file.path}</span></button>)}{!repo && <p className="px-3 py-5 text-xs leading-5 text-subtle">Enter a public repository to load its file tree. Private repository access and write operations require a GitHub OAuth/App integration.</p>}</aside>
         <div className="min-h-0 overflow-auto bg-background/40 p-3 sm:p-4">{selected ? <><div className="mb-2 flex items-center justify-between gap-2"><div className="truncate text-xs font-medium">{selected}</div>{repo && <a href={`${repo.html_url}/blob/${repo.default_branch}/${selected.split("/").map(encodeURIComponent).join("/")}`} target="_blank" rel="noreferrer" className="text-xs text-subtle hover:text-ink">View on GitHub</a>}</div>{busy ? <div className="flex items-center gap-2 py-6 text-sm text-subtle"><Loader2 className="animate-spin" />Loading source…</div> : <pre className="overflow-x-auto rounded-xl border border-line bg-panel p-3 text-[11px] leading-5 text-ink sm:text-xs"><code>{source}</code></pre>}</> : <div className="grid h-full min-h-40 place-items-center text-center text-sm text-subtle"><p>Choose a file to inspect its source.<br />Read-only browsing works with public repositories.</p></div>}</div>
       </div>
-      <footer className="border-t border-line px-4 py-2.5 text-[10px] text-subtle">This first version browses public repositories. Commits, pull requests, and private repositories require a securely configured GitHub authorization flow.</footer>
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3"><p className="max-w-2xl text-[10px] text-subtle">Public repository browsing is enabled. Writing commits, opening pull requests, and private repositories require a securely configured GitHub authorization flow.</p><Button size="sm" disabled={!repo || !selected || !source} onClick={() => { onUseContext("Help me work on the GitHub repository " + repo!.html_url + ". Review this file and propose concrete improvements. File: " + selected + "\n\nSource:\n" + source); onClose(); }}>Use file in chat</Button></footer>
     </section>
   </div>;
 }
