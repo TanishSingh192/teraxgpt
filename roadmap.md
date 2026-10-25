@@ -1,13 +1,14 @@
-# Roadmap
+# Roadmap — Move from Lovable Cloud to own Firebase
 
-- [x] ChatGPT/Claude-style chat redesign (verified desktop + mobile)
-- [x] Gemini models in the selector
-- [x] Web research mode (real search + opening pages + citations, via Firecrawl)
-- [x] Projects workspace (instructions, files, memory, conversations, artifacts)
-- [x] Voice input and spoken replies with interruption
-- [x] Image generation in the model selector (create + analyse images in the same chat)
-- [x] Agents: planning, tool execution, per-tool permissions, approval prompts, reusable per project
-- [x] Sign-in error fix (session auto-refresh with a clear message when it can't recover)
-- [x] Delete a chat from the sidebar
-- [x] Settings: personalization, memory, light/dark/system theme, skills, scheduled actions
-- [ ] Meta, NVIDIA, DeepSeek models — blocked: needs rotated credentials and exact model IDs supplied securely
+## Blocked on you
+- [ ] Resume the backend: workspace ran out of Cloud credits, database is paused. Add Cloud credits in workspace billing so it wakes up.
+- [ ] Export backup (after resume): More → Database → Manage → Settings → Export data. Do this BEFORE removing anything — removal is irreversible. Storage files are not included; download them from More → Storage.
+- [ ] Provide Firebase project config (web apiKey, projectId, appId, etc.) and a service-account JSON for the server side.
+- [ ] Remove Lovable Cloud (last step, admin only): More → Database → Manage → Settings → Remove Database.
+
+## In progress (me)
+- [ ] Scaffold Firebase client + admin modules
+- [ ] Migrate auth (email/password + Google) to Firebase Auth
+- [ ] Migrate database layer (29 files use Supabase: chat, projects, agents, settings, coworkers, connectors, plugins)
+- [ ] Migrate storage (generated images bucket) to Firebase Storage
+- [ ] Verify sign-in, chat, projects end-to-end on Firebase

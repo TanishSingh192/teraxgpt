@@ -1,0 +1,110 @@
+/**
+ * Verifies Firebase ID tokens on the server without firebase-admin
+ * (firebase-admin needs a full Node runtime; this app runs on a Worker
+ * runtime). Tokens are verified against Google's public JWKs using
+ * Web Crypto, which works in both dev and production.
+ */
+
+const GOOGLE_JWKS_URL =
+  "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@google.com";
+
+let jwksCache: { keys: Map<string, CryptoKey>; expiresAt: number } | null = null;
+
+async function getGoogleKeys(): Promise<Map<string, CryptoKey>> {
+  if (jwksCache && jwksCache.expiresAt > Date.now()) return jwksCache.keys;
+  const res = await fetch(GOOGLE_JWKS_URL);
+  if (!res.ok) throw new Error(`Could not load Google signing keys (${res.status})`);
+  const cacheControl = res.headers.get("cache-control") ?? "";
+  const maxAge = /max-age=(\d+)/.exec(cacheControl)?.[1];
+  const jwks = (await res.json()) as { keys: Array<JsonWebKey & { kid?: string }> };
+  const keys = new Map<string, CryptoKey>();
+  for (const jwk of jwks.keys) {
+    const kid = jwk.kid;
+    if (!kid) continue;
+    keys.set(
+      kid,
+      await crypto.subtle.importKey(
+        "jwk",
+        { ...jwk, alg: "RS256", ext: true },
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["verify"],
+      ),
+    );
+  }
+  jwksCache = {
+    keys,
+    expiresAt: Date.now() + (maxAge ? Number(maxAge) * 1000 : 60 * 60 * 1000) - 60_000,
+  };
+  return keys;
+}
+
+function base64UrlDecode(input: string): Uint8Array {
+  const b64 = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+}
+
+export interface FirebaseUser {
+  uid: string;
+  email?: string;
+  name?: string;
+  picture?: string;
+}
+
+export async function verifyFirebaseIdToken(
+  idToken: string,
+  projectId: string,
+): Promise<FirebaseUser> {
+  const parts = idToken.split(".");
+  if (parts.length !== 3) throw new Error("Malformed token");
+  const [headerB64, payloadB64, signatureB64] = parts as [string, string, string];
+
+  const header = JSON.parse(new TextDecoder().decode(base64UrlDecode(headerB64)));
+  if (header.alg !== "RS256" || typeof header.kid !== "string") {
+    throw new Error("Unsupported token header");
+  }
+
+  const certs = await getGoogleKeys();
+  const key = certs.get(header.kid);
+  if (!key) throw new Error("Unknown signing key");
+
+  const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+  const signature = base64UrlDecode(signatureB64);
+  const valid = await crypto.subtle.verify(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    signature.buffer as ArrayBuffer,
+    data.buffer as ArrayBuffer,
+  );
+  if (!valid) throw new Error("Invalid token signature");
+
+  const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadB64)));
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp <= now) throw new Error("Token expired");
+  if (payload.iat > now + 300) throw new Error("Token issued in the future");
+  if (payload.aud !== projectId) throw new Error("Wrong audience");
+  if (payload.iss !== `https://securetoken.google.com/${projectId}`) {
+    throw new Error("Wrong issuer");
+  }
+  if (typeof payload.sub !== "string" || payload.sub.length === 0) {
+    throw new Error("Missing subject");
+  }
+
+  return {
+    uid: payload.sub,
+    email: typeof payload.email === "string" ? payload.email : undefined,
+    name: typeof payload.name === "string" ? payload.name : undefined,
+    picture: typeof payload.picture === "string" ? payload.picture : undefined,
+  };
+}
+
+/** Extracts and verifies a Firebase ID token from an Authorization header. */
+export async function requireFirebaseUser(request: Request): Promise<FirebaseUser> {
+  const auth = request.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token) throw new Error("Sign in to continue.");
+  const projectId = process.env["VITE_FIREBASE_PROJECT_ID"] ?? "";
+  if (!projectId) throw new Error("Firebase is not configured on the server.");
+  return verifyFirebaseIdToken(token, projectId);
+}
