@@ -1,6 +1,5 @@
 import { PUBLIC_SUPABASE_KEY, PUBLIC_SUPABASE_URL } from "@/lib/public-backend";
 import { createFileRoute } from "@tanstack/react-router";
-import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -15,10 +14,6 @@ import {
 } from "ai";
 import { z } from "zod";
 
-import {
-  createLovableAiGatewayRunIdFetch,
-  getLovableAiGatewayRunId,
-} from "@/lib/ai-gateway.server";
 import { DEFAULT_AGENT_TOOLS, isWriteTool, type ToolId } from "@/lib/agent-tools";
 import { openPage, webSearch } from "@/lib/firecrawl.server";
 import { generateImageBytes } from "@/lib/image.server";
@@ -202,7 +197,6 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = process.env["LOVABLE_API_KEY"] ?? "";
         const geminiApiKey = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_API_KEY"] ?? "";
 
         // Authenticate the caller with their app session.
@@ -656,7 +650,6 @@ export const Route = createFileRoute("/api/chat")({
           return createUIMessageStreamResponse({ stream });
         }
 
-        const initialRunId = getLovableAiGatewayRunId(request);
         const hasTools = Object.keys(toolbox).length > 0;
         const shared = {
           system,
@@ -665,37 +658,22 @@ export const Route = createFileRoute("/api/chat")({
           ...(hasTools ? { tools: toolbox, stopWhen: stepCountIs(50) } : {}),
         };
 
-        const result =
-          model.endpoint === "responses"
-            ? (() => {
-                const runIdFetch = createLovableAiGatewayRunIdFetch(initialRunId);
-                const lovable = createOpenAI({
-                  baseURL: "https://ai.gateway.lovable.dev/v1",
-                  apiKey,
-                  headers: {
-                    "Lovable-API-Key": apiKey,
-                    "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-                  },
-                  fetch: runIdFetch.fetch,
-                });
-                return streamText({
-                  model: lovable.responses(model.id),
-                  ...shared,
-                  providerOptions: {
-                    openai: {
-                      forceReasoning: true,
-                      reasoningEffort: "low",
-                      reasoningSummary: "auto",
-                      store: false,
-                      include: ["reasoning.encrypted_content"],
-                    },
-                  },
-                });
-              })()
-            : streamText({
-                model: createOpenAICompatible({ name: "google", baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", apiKey: geminiApiKey })(model.id),
-                ...shared,
-              });
+        // All configured text models use Google's Gemini API directly.
+        // This avoids routing standard chat through a credit-metered third-party gateway.
+        if (model.endpoint === "responses") {
+          return Response.json(
+            { error: "This model endpoint is not supported by the current direct-Gemini configuration. Select a Gemini model." },
+            { status: 400 },
+          );
+        }
+        const result = streamText({
+          model: createOpenAICompatible({
+            name: "google",
+            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
+            apiKey: geminiApiKey,
+          })(model.id),
+          ...shared,
+        });
 
         return result.toUIMessageStreamResponse({
           sendReasoning: true,
