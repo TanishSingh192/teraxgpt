@@ -819,7 +819,7 @@ export function ChatView({
             <label className="relative hidden items-center sm:flex">
               <select value={modelId} disabled={engine === "agno"} onChange={(event) => setModelId(event.target.value)} aria-label="AI model" className="max-w-[130px] appearance-none rounded-lg bg-transparent py-2 pl-2 pr-6 font-display text-[13px] font-semibold outline-none hover:bg-background disabled:opacity-50 sm:max-w-none sm:pr-7 sm:text-[15px]">
                 <option value={AUTO}>Auto</option>
-                {MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
+                {MODELS.filter((model) => model.endpoint !== "image").map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
               </select>
               <ChevronDown className="pointer-events-none absolute right-1.5 size-3.5 text-subtle sm:right-2" />
             </label>
@@ -847,7 +847,7 @@ export function ChatView({
               {toolbarMenuOpen && (
                 <div role="menu" aria-label="Workspace actions" className="absolute right-0 top-11 z-50 max-h-[min(75vh,520px)] w-[min(88vw,280px)] overflow-y-auto rounded-xl border border-line bg-panel p-1.5 shadow-xl">
                   <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-subtle">Workspace</div>
-                  <label className="flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[13px] sm:hidden"><span>Model</span><select value={modelId} disabled={engine === "agno"} onChange={(event) => { setModelId(event.target.value); setToolbarMenuOpen(false); }} aria-label="AI model" className="max-w-36 rounded-md border border-line bg-background px-2 py-1.5 text-[12px] outline-none disabled:opacity-50"><option value={AUTO}>Auto</option>{MODELS.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}</select></label>
+                  <label className="flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[13px] sm:hidden"><span>Model</span><select value={modelId} disabled={engine === "agno"} onChange={(event) => { setModelId(event.target.value); setToolbarMenuOpen(false); }} aria-label="AI model" className="max-w-36 rounded-md border border-line bg-background px-2 py-1.5 text-[12px] outline-none disabled:opacity-50"><option value={AUTO}>Auto</option>{MODELS.filter((model) => model.endpoint !== "image").map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}</select></label>
                   <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); setGithubDevelopmentOpen(true); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><Github className="size-4 text-subtle" />GitHub development</button>
                   <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); setCanvasStudioOpen(true); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background"><PenTool className="size-4 text-subtle" />Canvas</button>
                   <button role="menuitem" type="button" onClick={() => { setToolbarMenuOpen(false); void openDocumentStudio(); }} disabled={assistantMessages.length === 0 || busy} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] hover:bg-background disabled:opacity-40 md:hidden"><FileText className="size-4 text-subtle" />Document Studio</button>
