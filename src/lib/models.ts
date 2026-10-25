@@ -51,6 +51,7 @@ export const MODELS: ModelEntry[] = [
 ];
 
 export const AUTO = "auto";
+export const FREE_MODEL_ID = "gemini-2.5-flash";
 export const IMAGE_DRIVER_ID = "gemini-2.5-flash-lite";
 
 export function getModel(id: string): ModelEntry {
