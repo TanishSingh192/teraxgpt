@@ -7,7 +7,7 @@ export type Endpoint = "responses" | "chat" | "image";
 export type ModelEntry = {
   id: string;
   label: string;
-  provider: "openai" | "google";
+  provider: "google";
   endpoint: Endpoint;
   blurb: string;
   capabilities: Capability[];
@@ -18,61 +18,38 @@ export type ModelEntry = {
 
 export const MODELS: ModelEntry[] = [
   {
-    id: "openai/gpt-6-astra",
-    label: "Astra",
-    provider: "openai",
-    endpoint: "responses",
-    blurb: "deep reasoning",
-    capabilities: ["text", "vision", "reasoning", "tools", "files"],
-    contextWindow: 400_000,
-    pricing: { input: 1.25, output: 10 },
-  },
-  {
-    id: "openai/gpt-5.6-terra",
-    label: "Terra",
-    provider: "openai",
-    endpoint: "responses",
-    blurb: "balanced everyday",
-    capabilities: ["text", "vision", "tools", "files"],
-    contextWindow: 272_000,
-    pricing: { input: 0.5, output: 4 },
-  },
-  {
-    id: "google/gemini-3.8-flash",
-    label: "Flash",
+    id: "gemini-3.8-flash",
+    label: "Gemini Flash",
     provider: "google",
     endpoint: "chat",
-    blurb: "fast responses",
-    capabilities: ["text", "vision", "tools", "files"],
-    contextWindow: 1_000_000,
-    pricing: { input: 0.3, output: 2.5 },
-  },
-  {
-    id: "google/gemini-3.1-pro-preview",
-    label: "Gemini Pro",
-    provider: "google",
-    endpoint: "chat",
-    blurb: "large context",
+    blurb: "general chat, coding, vision, and long context",
     capabilities: ["text", "vision", "reasoning", "tools", "files"],
     contextWindow: 1_000_000,
-    pricing: { input: 1.25, output: 10 },
+    pricing: { input: 0, output: 0 },
   },
   {
-    id: "openai/gpt-image-2.5-sunburst",
-    label: "Sunburst",
-    provider: "openai",
-    endpoint: "image",
-    blurb: "image creation",
-    capabilities: ["image", "text"],
-    contextWindow: 32_000,
-    pricing: { input: 0.5, output: 4 },
+    id: "gemini-3.1-flash-lite",
+    label: "Gemini Flash-Lite",
+    provider: "google",
+    endpoint: "chat",
+    blurb: "fast everyday answers on the free tier",
+    capabilities: ["text", "vision", "tools", "files"],
+    contextWindow: 1_000_000,
+    pricing: { input: 0, output: 0 },
   },
 ];
 
 export const AUTO = "auto";
 
 /** The image model is invoked as a tool, driven by this chat model. */
-export const IMAGE_DRIVER_ID = "openai/gpt-5.6-terra";
+export const IMAGE_DRIVER_ID = "gemini-3.8-flash";
+
+/** Hidden routing entry for image requests; image generation itself may be separately billed. */
+const IMAGE_MODEL: ModelEntry = {
+  id: "image-generation", label: "Image generation", provider: "google", endpoint: "image",
+  blurb: "image creation", capabilities: ["image", "text"], contextWindow: 32_000,
+  pricing: { input: 0, output: 0 },
+};
 
 export function getModel(id: string): ModelEntry {
   return MODELS.find((m) => m.id === id) ?? (MODELS[0] as ModelEntry);
@@ -106,21 +83,21 @@ export function routeRequest(input: RoutingInput): RoutingDecision {
 
   if (!hasImage && !hasFile && IMAGE_HINTS.test(text)) {
     return {
-      model: getModel("openai/gpt-image-2.5-sunburst"),
+      model: IMAGE_MODEL,
       task: "Image",
       reason: "image request — routed to the image model",
     };
   }
   if (hasImage) {
     return {
-      model: getModel("openai/gpt-6-astra"),
+      model: getModel("gemini-3.8-flash"),
       task: "Vision",
       reason: "image attached — routed to a vision + reasoning model",
     };
   }
   if (charCount > 24_000 || hasFile) {
     return {
-      model: getModel("google/gemini-3.1-pro-preview"),
+      model: getModel("gemini-3.8-flash"),
       task: "Large context",
       reason: hasFile ? "document attached — routed for long context" : "long input — routed for long context",
     };
@@ -141,13 +118,13 @@ export function routeRequest(input: RoutingInput): RoutingDecision {
   }
   if (RESEARCH_HINTS.test(text) || text.length < 160) {
     return {
-      model: getModel("google/gemini-3.8-flash"),
+      model: getModel("gemini-3.1-flash-lite"),
       task: "Quick answer",
       reason: "short or factual request — routed for low latency",
     };
   }
   return {
-    model: getModel("openai/gpt-5.6-terra"),
+    model: getModel("gemini-3.1-flash-lite"),
     task: "General",
     reason: "general writing task — routed to the balanced model",
   };
