@@ -142,8 +142,8 @@ async function generateDeck(prompt: string, slideCount: number, audience: string
   const content = payload.choices?.[0]?.message?.content;
   const raw = typeof content === "string" ? content : Array.isArray(content) ? content.map((part) => part.text ?? "").join("") : "";
   let parsed: unknown;
-  try { parsed = JSON.parse(raw.replace(/^```(?:json)?\\s*/i, "").replace(/\\s*```$/, "")); }
-  catch { throw new Error("OpenRouter returned an invalid slide outline. Please try the request again."); }
+  try { parsed = JSON.parse(raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); }
+  catch { throw new Error("Gemini returned an invalid slide outline. Please try the request again."); }
 
   const shape = z.object({
     title: z.string().min(1).max(160),
@@ -180,7 +180,7 @@ export const Route = createFileRoute("/api/presentations")({
         try {
           const deck = await generateDeck(parsed.data.prompt, parsed.data.slideCount ?? 10, parsed.data.audience ?? "", parsed.data.style ?? "modern", request.signal);
           const pptxBase64 = buildPptx(deck);
-          return Response.json({ deck, pptxBase64, fileName: `${deck.title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 70) || "teraxgpt-presentation"}.pptx`, provider: `Google Gemini · ${process.env["GEMINI_PRESENTATION_MODEL"] ?? "gemini-2.5-flash"}` });
+          return Response.json({ deck, pptxBase64, fileName: `${deck.title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 70) || "teraxgpt-presentation"}.pptx`, provider: `Google Gemini · ${process.env["GEMINI_PRESENTATION_MODEL"] ?? "gemini-2.5-flash"}` }, { headers: { "Cache-Control": "no-store" } });
         } catch (cause) {
           return Response.json({ error: cause instanceof Error ? cause.message : "PowerPoint generation failed." }, { status: 502 });
         }
