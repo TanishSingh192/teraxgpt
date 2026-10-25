@@ -179,7 +179,7 @@ export const Route = createFileRoute("/api/presentations")({
         try {
           const deck = await generateDeck(parsed.data.prompt, parsed.data.slideCount ?? 10, parsed.data.audience ?? "", parsed.data.style ?? "modern", request.signal);
           const pptxBase64 = buildPptx(deck);
-          return Response.json({ deck, pptxBase64, fileName: `${deck.title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 70) || "teraxgpt-presentation"}.pptx`, provider: "Gemini 3.8 Flash · Google free tier" });
+          return Response.json({ deck, pptxBase64, fileName: `${deck.title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 70) || "teraxgpt-presentation"}.pptx`, provider: "Gemini 2.5 Flash · Google AI Studio free-tier eligible" });
         } catch (cause) {
           return Response.json({ error: cause instanceof Error ? cause.message : "PowerPoint generation failed." }, { status: 502 });
         }
