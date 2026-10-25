@@ -102,18 +102,16 @@ function buildPptx(deck: Deck) {
 }
 
 async function generateDeck(prompt: string, slideCount: number, audience: string, style: string, signal: AbortSignal): Promise<Deck> {
-  const apiKey = process.env["OPENROUTER_API_KEY"] ?? "";
-  if (!apiKey) throw new Error("OpenRouter is not configured. Add OPENROUTER_API_KEY to the server environment.");
-  const model = process.env["OPENROUTER_PRESENTATION_MODEL"] ?? "google/gemini-2.5-flash";
-  const appUrl = process.env["APP_URL"] ?? process.env["VITE_APP_URL"] ?? "https://teraxgpt.app";
+  // Use the same Google Gemini API key and OpenAI-compatible Gemini endpoint as chat.
+  const apiKey = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_API_KEY"] ?? "";
+  if (!apiKey) throw new Error("Gemini is not configured. Add GEMINI_API_KEY to the server environment.");
+  const model = process.env["GEMINI_PRESENTATION_MODEL"] ?? "gemini-2.5-flash";
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
-      "HTTP-Referer": appUrl,
-      "X-Title": "TeraXGPT Presentations",
     },
     signal,
     body: JSON.stringify({
@@ -133,9 +131,9 @@ async function generateDeck(prompt: string, slideCount: number, audience: string
 
   if (!response.ok) {
     const details = await response.text().catch(() => "");
-    if (response.status === 429) throw new Error("OpenRouter rate limit or provider quota reached. Try again later or check your OpenRouter credits.");
-    if (response.status === 401 || response.status === 403) throw new Error("OpenRouter rejected the API key. Check OPENROUTER_API_KEY in your server environment.");
-    throw new Error(`OpenRouter (${model}) returned HTTP ${response.status}: ${details.slice(0, 300)}`);
+    if (response.status === 429) throw new Error("Gemini rate limit or quota reached. Check your Google AI Studio quota and try again later.");
+    if (response.status === 401 || response.status === 403) throw new Error("Gemini rejected the API key. Check GEMINI_API_KEY in your server environment.");
+    throw new Error(`Gemini (${model}) returned HTTP ${response.status}: ${details.slice(0, 300)}`);
   }
 
   const payload = await response.json() as {
@@ -182,7 +180,7 @@ export const Route = createFileRoute("/api/presentations")({
         try {
           const deck = await generateDeck(parsed.data.prompt, parsed.data.slideCount ?? 10, parsed.data.audience ?? "", parsed.data.style ?? "modern", request.signal);
           const pptxBase64 = buildPptx(deck);
-          return Response.json({ deck, pptxBase64, fileName: `${deck.title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 70) || "teraxgpt-presentation"}.pptx`, provider: `OpenRouter · ${process.env["OPENROUTER_PRESENTATION_MODEL"] ?? "google/gemini-2.5-flash"}` });
+          return Response.json({ deck, pptxBase64, fileName: `${deck.title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 70) || "teraxgpt-presentation"}.pptx`, provider: `Google Gemini · ${process.env["GEMINI_PRESENTATION_MODEL"] ?? "gemini-2.5-flash"}` });
         } catch (cause) {
           return Response.json({ error: cause instanceof Error ? cause.message : "PowerPoint generation failed." }, { status: 502 });
         }
