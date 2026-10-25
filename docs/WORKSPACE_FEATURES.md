@@ -18,6 +18,13 @@ This document distinguishes shipped foundations from future work. TeraXGPT is no
 - Configure `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) as a server-only deployment secret. No database migration is required for generation. If the secret is missing or the provider rejects the request, generation returns an error rather than a fake deck.
 - The current renderer is primarily text-and-shape based. Embedded imagery, rich chart types, long-term persistence of the binary deck, and cross-browser presentation QA remain future improvements.
 
+## Hosting and AI provider portability
+
+- Standard chat and PowerPoint generation use the Gemini API directly; image generation now uses Gemini Interactions API directly instead of the Lovable AI Gateway.
+- `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) must be configured as a server-side secret. Google AI Studio free-tier availability and model quotas depend on the Google project; the application cannot bypass provider limits.
+- A Cloudflare Workers deployment configuration and setup guide are available in `wrangler.toml` and `docs/DEPLOY_CLOUDFLARE.md`. The repository changes do not deploy to a Cloudflare account automatically.
+- Supabase remains the app backend for auth, database and storage. The hosting move does not migrate or copy data; keep the existing Supabase project active until an independently tested database/storage migration is completed.
+
 ## Deployment
 
 1. Apply `drizzle/migrations/0006_create_user_plugin_settings.sql` after the existing MCP connector migration.
