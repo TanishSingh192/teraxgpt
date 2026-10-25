@@ -102,24 +102,27 @@ function buildPptx(deck: Deck) {
 }
 
 async function generateDeck(prompt: string, slideCount: number, audience: string, style: string, signal: AbortSignal): Promise<Deck> {
-  // Use Google's API directly so eligible requests can use its free tier.
-  const apiKey = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_API_KEY"] ?? "";
-  if (!apiKey) throw new Error("Gemini is not configured. Add GEMINI_API_KEY from Google AI Studio to the server environment.");
+  const apiKey = process.env["OPENROUTER_API_KEY"] ?? "";
+  if (!apiKey) throw new Error("OpenRouter is not configured. Add OPENROUTER_API_KEY to the server environment.");
+  const model = process.env["OPENROUTER_PRESENTATION_MODEL"] ?? "google/gemini-2.5-flash";
+  const appUrl = process.env["APP_URL"] ?? process.env["VITE_APP_URL"] ?? "https://teraxgpt.app";
 
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
+      "HTTP-Referer": appUrl,
+      "X-Title": "TeraXGPT Presentations",
     },
     signal,
     body: JSON.stringify({
-      model: "gemini-2.5-flash",
+      model,
       messages: [
-        { role: "system", content: "You are an expert presentation designer. Return only valid JSON, with no markdown fences or commentary." },
+        { role: "system", content: "You are an expert presentation strategist and visual slide designer. Return only valid JSON, with no markdown fences or commentary. Make every slide specific, coherent, and useful to the stated audience." },
         {
           role: "user",
-          content: `Create a high-quality PowerPoint presentation based on this request. Return ONLY valid JSON with this shape: {"title":string,"subtitle":string,"theme":{"background":"#RRGGBB","foreground":"#RRGGBB","accent":"#RRGGBB","muted":"#RRGGBB"},"slides":[{"title":string,"subtitle":string,"bullets":string[],"layout":"title"|"content"|"closing","speakerNotes":string}]}. Make exactly ${slideCount} slides including a title slide and a concise closing slide. Audience: ${audience || "general professional audience"}. Visual style: ${style}. Keep bullets concise, concrete, and useful; normally 3–5 bullets per content slide. Create a coherent narrative, strong titles, meaningful examples, and a clear takeaway. Do not invent precise statistics or citations; qualify assumptions and add sources to slide bullets when the topic needs current facts. User request: ${prompt}`,
+          content: `Create a polished PowerPoint presentation based on this request. Return ONLY valid JSON with this shape: {"title":string,"subtitle":string,"theme":{"background":"#RRGGBB","foreground":"#RRGGBB","accent":"#RRGGBB","muted":"#RRGGBB"},"slides":[{"title":string,"subtitle":string,"bullets":string[],"layout":"title"|"content"|"closing","speakerNotes":string}]}. Make exactly ${slideCount} slides including a title slide and a concise closing slide. Audience: ${audience || "general professional audience"}. Visual style: ${style}. Keep bullets concise, concrete, and useful; normally 3–5 bullets per content slide. Create a coherent narrative, strong slide titles, useful examples, clear takeaways, and speaker notes that help present the material. Avoid repetitive slide structures. Do not invent precise statistics or citations; qualify assumptions and include source names/URLs in slide bullets when the topic needs current facts. User request: ${prompt}`,
         },
       ],
       response_format: { type: "json_object" },
@@ -130,9 +133,9 @@ async function generateDeck(prompt: string, slideCount: number, audience: string
 
   if (!response.ok) {
     const details = await response.text().catch(() => "");
-    if (response.status === 429) throw new Error("Gemini free-tier rate limit reached. Try again later or check your Google AI Studio quota.");
-    if (response.status === 401 || response.status === 403) throw new Error("Google Gemini rejected the API key. Check GEMINI_API_KEY in your server environment.");
-    throw new Error(`Google Gemini returned HTTP ${response.status}: ${details.slice(0, 300)}`);
+    if (response.status === 429) throw new Error("OpenRouter rate limit or provider quota reached. Try again later or check your OpenRouter credits.");
+    if (response.status === 401 || response.status === 403) throw new Error("OpenRouter rejected the API key. Check OPENROUTER_API_KEY in your server environment.");
+    throw new Error(`OpenRouter (${model}) returned HTTP ${response.status}: ${details.slice(0, 300)}`);
   }
 
   const payload = await response.json() as {
@@ -141,8 +144,8 @@ async function generateDeck(prompt: string, slideCount: number, audience: string
   const content = payload.choices?.[0]?.message?.content;
   const raw = typeof content === "string" ? content : Array.isArray(content) ? content.map((part) => part.text ?? "").join("") : "";
   let parsed: unknown;
-  try { parsed = JSON.parse(raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); }
-  catch { throw new Error("Gemini returned an invalid slide outline. Please try the request again."); }
+  try { parsed = JSON.parse(raw.replace(/^```(?:json)?\\s*/i, "").replace(/\\s*```$/, "")); }
+  catch { throw new Error("OpenRouter returned an invalid slide outline. Please try the request again."); }
 
   const shape = z.object({
     title: z.string().min(1).max(160),
@@ -179,7 +182,7 @@ export const Route = createFileRoute("/api/presentations")({
         try {
           const deck = await generateDeck(parsed.data.prompt, parsed.data.slideCount ?? 10, parsed.data.audience ?? "", parsed.data.style ?? "modern", request.signal);
           const pptxBase64 = buildPptx(deck);
-          return Response.json({ deck, pptxBase64, fileName: `${deck.title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 70) || "teraxgpt-presentation"}.pptx`, provider: "Gemini 2.5 Flash · Google AI Studio free-tier eligible" });
+          return Response.json({ deck, pptxBase64, fileName: `${deck.title.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 70) || "teraxgpt-presentation"}.pptx`, provider: `OpenRouter · ${process.env["OPENROUTER_PRESENTATION_MODEL"] ?? "google/gemini-2.5-flash"}` });
         } catch (cause) {
           return Response.json({ error: cause instanceof Error ? cause.message : "PowerPoint generation failed." }, { status: 502 });
         }
