@@ -102,44 +102,44 @@ function buildPptx(deck: Deck) {
 }
 
 async function generateDeck(prompt: string, slideCount: number, audience: string, style: string, signal: AbortSignal): Promise<Deck> {
-  // Direct Google Gemini Developer API. Use a Google AI Studio key on its free tier.
+  // Use Google's API directly so eligible requests can use its free tier.
   const apiKey = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_API_KEY"] ?? "";
-  if (!apiKey) throw new Error("Free Gemini API is not configured. Add GEMINI_API_KEY from Google AI Studio to the server environment.");
+  if (!apiKey) throw new Error("Gemini is not configured. Add GEMINI_API_KEY from Google AI Studio to the server environment.");
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
     signal,
     body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: "You are an expert presentation designer. Return only valid JSON, with no markdown fences or commentary." }],
-      },
-      contents: [{
-        role: "user",
-        parts: [{
-          text: `Create a high-quality PowerPoint presentation based on this request. Return ONLY valid JSON with this shape: {"title":string,"subtitle":string,"theme":{"background":"#RRGGBB","foreground":"#RRGGBB","accent":"#RRGGBB","muted":"#RRGGBB"},"slides":[{"title":string,"subtitle":string,"bullets":string[],"layout":"title"|"content"|"closing","speakerNotes":string}]}. Make exactly ${slideCount} slides including a title slide and a concise closing slide. Audience: ${audience || "general professional audience"}. Visual style: ${style}. Keep bullets concise, concrete, and useful; normally 3–5 bullets per content slide. Create a coherent narrative, strong titles, meaningful examples, and a clear takeaway. Do not invent precise statistics or citations; qualify assumptions and add sources to slide bullets when the topic needs current facts. User request: ${prompt}`,
-        }],
-      }],
-      generationConfig: { responseMimeType: "application/json", temperature: 0.45, maxOutputTokens: 9000 },
+      model: "gemini-2.5-flash",
+      messages: [
+        { role: "system", content: "You are an expert presentation designer. Return only valid JSON, with no markdown fences or commentary." },
+        {
+          role: "user",
+          content: `Create a high-quality PowerPoint presentation based on this request. Return ONLY valid JSON with this shape: {"title":string,"subtitle":string,"theme":{"background":"#RRGGBB","foreground":"#RRGGBB","accent":"#RRGGBB","muted":"#RRGGBB"},"slides":[{"title":string,"subtitle":string,"bullets":string[],"layout":"title"|"content"|"closing","speakerNotes":string}]}. Make exactly ${slideCount} slides including a title slide and a concise closing slide. Audience: ${audience || "general professional audience"}. Visual style: ${style}. Keep bullets concise, concrete, and useful; normally 3–5 bullets per content slide. Create a coherent narrative, strong titles, meaningful examples, and a clear takeaway. Do not invent precise statistics or citations; qualify assumptions and add sources to slide bullets when the topic needs current facts. User request: ${prompt}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.45,
+      max_tokens: 9000,
     }),
   });
 
   if (!response.ok) {
     const details = await response.text().catch(() => "");
-    if (response.status === 429) throw new Error("Gemini free-tier rate limit reached. Wait a little and try again.");
-    if (response.status === 401 || response.status === 403) throw new Error("Google Gemini rejected the API key. Check GEMINI_API_KEY and ensure the Google AI Studio project is enabled for the free tier.");
-    throw new Error(`Google Gemini API returned HTTP ${response.status}: ${details.slice(0, 300)}`);
+    if (response.status === 429) throw new Error("Gemini free-tier rate limit reached. Try again later or check your Google AI Studio quota.");
+    if (response.status === 401 || response.status === 403) throw new Error("Google Gemini rejected the API key. Check GEMINI_API_KEY in your server environment.");
+    throw new Error(`Google Gemini returned HTTP ${response.status}: ${details.slice(0, 300)}`);
   }
 
   const payload = await response.json() as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    promptFeedback?: { blockReason?: string };
+    choices?: Array<{ message?: { content?: string | Array<{ type?: string; text?: string }> } }>;
   };
-  const raw = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
-  if (!raw.trim()) {
-    if (payload.promptFeedback?.blockReason) throw new Error(`Gemini blocked this presentation request: ${payload.promptFeedback.blockReason}.`);
-    throw new Error("Gemini returned no slide content. Try a shorter or more specific prompt.");
-  }
+  const content = payload.choices?.[0]?.message?.content;
+  const raw = typeof content === "string" ? content : Array.isArray(content) ? content.map((part) => part.text ?? "").join("") : "";
   let parsed: unknown;
   try { parsed = JSON.parse(raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); }
   catch { throw new Error("Gemini returned an invalid slide outline. Please try the request again."); }
