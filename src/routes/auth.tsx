@@ -52,18 +52,30 @@ function AuthPage() {
         });
         if (error) throw error;
         if (!data.session) {
-          // Fall back to an immediate sign-in when no session came back.
-          const { error: signInError } = await supabase.auth.signInWithPassword({
+          // Fall back to an immediate sign-in when email confirmation is disabled.
+          const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({
             email,
             password,
           });
           if (signInError) throw signInError;
+          if (!signedIn.session) {
+            toast.success("Account created. Check your email to confirm your address, then sign in.");
+            return;
+          }
         }
         toast.success("Welcome to TeraX CPT.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        if (!data.session) throw new Error("Sign-in succeeded but no session was returned. Check your email confirmation and Supabase Auth settings.");
       }
+
+      // Do not rely only on the auth listener to navigate: explicitly confirm
+      // that the persisted session is readable before entering the protected app.
+      const { data: restored, error: restoreError } = await supabase.auth.getSession();
+      if (restoreError) throw restoreError;
+      if (!restored.session) throw new Error("Your session was not saved. Check the site's storage/cookie settings and try again.");
+      await navigate({ to: "/" });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong.");
     } finally {
