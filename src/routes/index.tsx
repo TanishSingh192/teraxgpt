@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ChatView, type AppMessage } from "@/components/workspace/ChatView";
 import { Sidebar, type ConversationRow } from "@/components/workspace/Sidebar";
 import { useSession } from "@/hooks/useSession";
+import { AUTH_ENABLED } from "@/lib/auth-config";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
@@ -68,7 +69,7 @@ function Workspace() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && !session) void navigate({ to: "/auth" });
+    if (AUTH_ENABLED && !loading && !session) void navigate({ to: "/auth" });
   }, [loading, session, navigate]);
 
   const refreshConversations = useCallback(async () => {
