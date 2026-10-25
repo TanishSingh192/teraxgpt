@@ -26,7 +26,8 @@ export const Route = createFileRoute("/api/push")({
         if (!getPushPublicKey()) return Response.json({ error: "Push notifications are not configured on the server." }, { status: 503 });
         const user = await authenticatedUser(request);
         if (!user) return Response.json({ error: "Sign in to manage push notifications." }, { status: 401 });
-        // Supabase generated types do not include the hand-managed push_subscriptions table yet.\n        // eslint-disable-next-line @typescript-eslint/no-explicit-any\n        // Supabase generated types do not include the hand-managed push_subscriptions table yet.\n        // eslint-disable-next-line @typescript-eslint/no-explicit-any\n        const db = supabaseAdmin as unknown as { from: (table: string) => any };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const db = supabaseAdmin as unknown as { from: (table: string) => any };
         const { data, error } = await db.from("push_subscriptions").select("endpoint").eq("user_id", user.id);
         if (error) return Response.json({ error: "Could not read notification settings. Apply the push subscriptions migration first." }, { status: 503 });
         return Response.json({ publicKey: getPushPublicKey(), enabled: Boolean(data?.length) });
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/api/push")({
         try { body = await request.json(); } catch { return Response.json({ error: "Invalid request body." }, { status: 400 }); }
         const parsed = z.object({ action: z.enum(["subscribe", "unsubscribe", "test"]).optional(), subscription: SubscriptionSchema.optional() }).safeParse(body);
         if (!parsed.success) return Response.json({ error: "Invalid push request." }, { status: 400 });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const db = supabaseAdmin as unknown as { from: (table: string) => any };
         if (parsed.data.action === "test") {
           const sent = await sendPushToUser(user.id, { title: "TeraXGPT notifications enabled", body: "Push notifications are working. Scheduled actions will notify you here.", url: "/settings" });
