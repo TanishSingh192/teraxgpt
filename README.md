@@ -82,7 +82,7 @@ Save actual captures under `docs/screenshots/` and update the image references a
 
 ## System architecture
 
-The application uses a React/TanStack web client and server routes. Requests pass through an authenticated API layer, then a model-routing and tool-orchestration layer. Provider credentials remain server-side. Supabase provides authentication and database access; Drizzle is used for schema/migration tooling.
+The application uses a React/TanStack web client and server routes. Requests pass through an authenticated API layer, then a model-routing and tool-orchestration layer. Gemini is called directly from server routes; provider credentials remain server-side. Supabase provides authentication and database access; Drizzle is used for schema/migration tooling. Cloudflare Workers is the documented free-tier hosting target.
 
 ```mermaid
 flowchart TD
@@ -92,8 +92,7 @@ flowchart TD
     AUTH --> POLICY[Request policy and plugin settings]
     POLICY --> CHAT[Chat orchestration / Vercel AI SDK]
     CHAT --> ROUTER[Model registry and task router]
-    ROUTER --> GATEWAY[Server-side AI Gateway]
-    GATEWAY --> LLM[Configured text, reasoning and vision models]
+    ROUTER --> LLM[Google Gemini API: text, vision and image generation]
     CHAT --> SEARCH[Web search and source reader]
     CHAT --> IMAGE[Image generation service]
     CHAT --> MCP[MCP connector discovery and tool calls]
@@ -124,7 +123,7 @@ For a more detailed breakdown, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | Routing and full-stack framework | TanStack Start, TanStack Router |
 | Build tooling | Vite |
 | AI orchestration | Vercel AI SDK |
-| Model access | Server-side Lovable AI Gateway integration and model registry |
+| Model access | Direct Google Gemini API and model registry |
 | Authentication and database | Supabase |
 | Schema/migrations | Drizzle ORM and SQL migrations |
 | Research | Firecrawl-backed web search and page reading |
@@ -140,7 +139,7 @@ Provider availability and model IDs are determined by the current model registry
 
 - [Bun](https://bun.sh/) compatible with the lockfile and package scripts.
 - A Supabase project with the required database schema/migrations.
-- The AI gateway and any optional search/image provider configuration used by your deployment.
+- A Gemini API key from Google AI Studio. Image generation requires an image-capable Gemini model to be enabled for your project.
 - Node.js only if required by your chosen Bun/Vite deployment environment.
 
 ### 1. Clone and install
@@ -232,7 +231,7 @@ src/
   components/       Shared UI and chat components
   hooks/             React hooks, including session handling
   integrations/      Supabase client integration
-  lib/               Model routing, AI gateway, MCP, research and tool helpers
+  lib/               Model routing, Gemini API, MCP, research and tool helpers
   routes/            TanStack pages and server API routes
     api/             Server endpoints for chat and settings
 drizzle/
