@@ -22,7 +22,7 @@ import {
 import { DEFAULT_AGENT_TOOLS, isWriteTool, type ToolId } from "@/lib/agent-tools";
 import { openPage, webSearch } from "@/lib/firecrawl.server";
 import { generateImageBytes } from "@/lib/image.server";
-import { AUTO, IMAGE_DRIVER_ID, getModel, routeRequest, type ModelEntry } from "@/lib/models";
+import { AUTO, FREE_MODEL_ID, IMAGE_DRIVER_ID, getModel, routeRequest, type ModelEntry } from "@/lib/models";
 import { callMcpTool, decryptConnectorToken, listMcpTools, type McpTool } from "@/lib/mcp.server";
 
 const SYSTEM_PROMPT = `You are TeraX CPT, a unified AI workspace assistant.
@@ -321,7 +321,7 @@ export const Route = createFileRoute("/api/chat")({
           chosen === AUTO
             ? research
               ? {
-                  model: getModel("openai/gpt-6-astra"),
+                  model: getModel(FREE_MODEL_ID),
                   task: "Web research",
                   reason: "research mode — routed to a tool-using reasoning model",
                 }
