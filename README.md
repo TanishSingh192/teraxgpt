@@ -184,6 +184,12 @@ bun run build
 
 These commands are provided by the project. Run them locally and resolve failures before shipping. Also perform deployment smoke tests for authentication, streaming chat, migration status, temporary-chat persistence, plugin enforcement, and MCP approval behavior.
 
+## Supabase project migration
+
+See [docs/SUPABASE_PROJECT_MIGRATION.md](docs/SUPABASE_PROJECT_MIGRATION.md) for the safe
+project switch, schema rollout, and data-migration checklist. Application configuration uses
+environment variables; secrets and database credentials must not be committed.
+
 ## Environment variables
 
 The current `.env.example` includes the following variables:
