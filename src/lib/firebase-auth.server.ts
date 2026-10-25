@@ -1,41 +1,37 @@
 /**
  * Verifies Firebase ID tokens on the server without firebase-admin
  * (firebase-admin needs a full Node runtime; this app runs on a Worker
- * runtime). Tokens are verified against Google's public certs using
- * Web Crypto, which is available in both dev and production.
+ * runtime). Tokens are verified against Google's public JWKs using
+ * Web Crypto, which works in both dev and production.
  */
 
-const GOOGLE_CERTS_URL =
-  "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@google.com";
+const GOOGLE_JWKS_URL =
+  "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@google.com";
 
-let certCache: { keys: Record<string, CryptoKey>; expiresAt: number } | null = null;
+let jwksCache: { keys: Map<string, CryptoKey>; expiresAt: number } | null = null;
 
-async function getGoogleCerts(): Promise<Record<string, CryptoKey>> {
-  if (certCache && certCache.expiresAt > Date.now()) return certCache.keys;
-  const res = await fetch(GOOGLE_CERTS_URL);
-  if (!res.ok) throw new Error(`Could not load Google signing certs (${res.status})`);
+async function getGoogleKeys(): Promise<Map<string, CryptoKey>> {
+  if (jwksCache && jwksCache.expiresAt > Date.now()) return jwksCache.keys;
+  const res = await fetch(GOOGLE_JWKS_URL);
+  if (!res.ok) throw new Error(`Could not load Google signing keys (${res.status})`);
   const cacheControl = res.headers.get("cache-control") ?? "";
   const maxAge = /max-age=(\d+)/.exec(cacheControl)?.[1];
-  const certs = (await res.json()) as Record<string, string>;
-  const keys: Record<string, CryptoKey> = {};
-  for (const [kid, pem] of Object.entries(certs)) {
-    const der = pem
-      .replace(/-----BEGIN CERTIFICATE-----/, "")
-      .replace(/-----END CERTIFICATE-----/, "")
-      .replace(/\s/g, "");
-    const binary = Uint8Array.from(atob(der), (c) => c.charCodeAt(0));
-    keys[kid] = await crypto.subtle.importKey(
-      "spki",
-      binary.buffer,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["verify"],
-    ).catch(async () => {
-      // Some environments can't import x509 directly as spki; fall through.
-      throw new Error("Unsupported certificate format");
-    });
+  const jwks = (await res.json()) as { keys: JsonWebKey[] };
+  const keys = new Map<string, CryptoKey>();
+  for (const jwk of jwks.keys) {
+    if (!jwk.kid) continue;
+    keys.set(
+      jwk.kid,
+      await crypto.subtle.importKey(
+        "jwk",
+        { ...jwk, alg: "RS256", ext: true },
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["verify"],
+      ),
+    );
   }
-  certCache = {
+  jwksCache = {
     keys,
     expiresAt: Date.now() + (maxAge ? Number(maxAge) * 1000 : 60 * 60 * 1000) - 60_000,
   };
@@ -68,8 +64,8 @@ export async function verifyFirebaseIdToken(
     throw new Error("Unsupported token header");
   }
 
-  const certs = await getGoogleCerts();
-  const key = certs[header.kid];
+  const certs = await getGoogleKeys();
+  const key = certs.get(header.kid);
   if (!key) throw new Error("Unknown signing key");
 
   const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
@@ -87,9 +83,7 @@ export async function verifyFirebaseIdToken(
   if (payload.exp <= now) throw new Error("Token expired");
   if (payload.iat > now + 300) throw new Error("Token issued in the future");
   if (payload.aud !== projectId) throw new Error("Wrong audience");
-  if (
-    payload.iss !== `https://securetoken.google.com/${projectId}`
-  ) {
+  if (payload.iss !== `https://securetoken.google.com/${projectId}`) {
     throw new Error("Wrong issuer");
   }
   if (typeof payload.sub !== "string" || payload.sub.length === 0) {
