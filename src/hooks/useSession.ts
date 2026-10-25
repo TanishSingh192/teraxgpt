@@ -26,15 +26,15 @@ export function useSession() {
     }, 10000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!AUTH_ENABLED && !nextSession && !anonymousSessionReady) return;
       receivedAuthEvent = true;
       window.clearTimeout(loadingFallback);
       if (!active) return;
-      if (!AUTH_ENABLED && !nextSession && !anonymousSessionReady) return;
       setSession(nextSession);
       setLoading(false);
     });
 
-    void supabase.auth.getSession().then(({ data, error }) => {
+    void supabase.auth.getSession().then(async ({ data, error }) => {
       if (!active || receivedAuthEvent) return;
       window.clearTimeout(loadingFallback);
       if (error) {
