@@ -16,12 +16,13 @@ async function getGoogleKeys(): Promise<Map<string, CryptoKey>> {
   if (!res.ok) throw new Error(`Could not load Google signing keys (${res.status})`);
   const cacheControl = res.headers.get("cache-control") ?? "";
   const maxAge = /max-age=(\d+)/.exec(cacheControl)?.[1];
-  const jwks = (await res.json()) as { keys: JsonWebKey[] };
+  const jwks = (await res.json()) as { keys: Array<JsonWebKey & { kid?: string }> };
   const keys = new Map<string, CryptoKey>();
   for (const jwk of jwks.keys) {
-    if (!jwk.kid) continue;
+    const kid = jwk.kid;
+    if (!kid) continue;
     keys.set(
-      jwk.kid,
+      kid,
       await crypto.subtle.importKey(
         "jwk",
         { ...jwk, alg: "RS256", ext: true },
@@ -57,7 +58,7 @@ export async function verifyFirebaseIdToken(
 ): Promise<FirebaseUser> {
   const parts = idToken.split(".");
   if (parts.length !== 3) throw new Error("Malformed token");
-  const [headerB64, payloadB64, signatureB64] = parts;
+  const [headerB64, payloadB64, signatureB64] = parts as [string, string, string];
 
   const header = JSON.parse(new TextDecoder().decode(base64UrlDecode(headerB64)));
   if (header.alg !== "RS256" || typeof header.kid !== "string") {
