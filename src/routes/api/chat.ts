@@ -398,8 +398,8 @@ export const Route = createFileRoute("/api/chat")({
             }),
             ...(approvalNeeded("generate_image") ? { needsApproval: true } : {}),
             execute: async ({ prompt }) => {
-              if (!apiKey) throw new Error("Image generation uses a separate image service and is not included in the free Gemini text-model tier. Configure LOVABLE_API_KEY to enable it.");
-              const bytes = await generateImageBytes(apiKey, prompt, request.signal);
+              if (!geminiApiKey) throw new Error("Image generation requires GEMINI_API_KEY (or GOOGLE_API_KEY) from Google AI Studio. Configure it as a server-side secret.");
+              const bytes = await generateImageBytes(geminiApiKey, prompt, request.signal);
               const path = `${userId}/${crypto.randomUUID()}.png`;
               const { error } = await supabase.storage
                 .from("generated-images")
