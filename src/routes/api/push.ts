@@ -10,6 +10,24 @@ const SubscriptionSchema = z.object({
   keys: z.object({ p256dh: z.string().min(40).max(200), auth: z.string().min(16).max(100) }),
 }).strict();
 
+type PushDbError = { message: string } | null;
+type PushDeleteQuery = PromiseLike<{ error: PushDbError }> & {
+  eq: (column: "endpoint", value: string) => PromiseLike<{ error: PushDbError }>;
+};
+type PushSubscriptionsTable = {
+  select: (columns: "endpoint") => {
+    eq: (column: "user_id", value: string) => PromiseLike<{ data: Array<{ endpoint: string }> | null; error: PushDbError }>;
+  };
+  delete: () => {
+    eq: (column: "user_id", value: string) => PushDeleteQuery;
+  };
+  upsert: (
+    values: { user_id: string; endpoint: string; subscription: z.infer<typeof SubscriptionSchema>; updated_at: string },
+    options: { onConflict: "endpoint" },
+  ) => PromiseLike<{ error: PushDbError }>;
+};
+type PushDatabase = { from: (table: "push_subscriptions") => PushSubscriptionsTable };
+
 async function authenticatedUser(request: Request) {
   const authHeader = request.headers.get("authorization") ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
@@ -26,8 +44,7 @@ export const Route = createFileRoute("/api/push")({
         if (!getPushPublicKey()) return Response.json({ error: "Push notifications are not configured on the server." }, { status: 503 });
         const user = await authenticatedUser(request);
         if (!user) return Response.json({ error: "Sign in to manage push notifications." }, { status: 401 });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const db = supabaseAdmin as unknown as { from: (table: string) => any };
+        const db = supabaseAdmin as unknown as PushDatabase;
         const { data, error } = await db.from("push_subscriptions").select("endpoint").eq("user_id", user.id);
         if (error) return Response.json({ error: "Could not read notification settings. Apply the push subscriptions migration first." }, { status: 503 });
         return Response.json({ publicKey: getPushPublicKey(), enabled: Boolean(data?.length) });
@@ -41,8 +58,7 @@ export const Route = createFileRoute("/api/push")({
         try { body = await request.json(); } catch { return Response.json({ error: "Invalid request body." }, { status: 400 }); }
         const parsed = z.object({ action: z.enum(["subscribe", "unsubscribe", "test"]).optional(), subscription: SubscriptionSchema.optional() }).safeParse(body);
         if (!parsed.success) return Response.json({ error: "Invalid push request." }, { status: 400 });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const db = supabaseAdmin as unknown as { from: (table: string) => any };
+        const db = supabaseAdmin as unknown as PushDatabase;
         if (parsed.data.action === "test") {
           const sent = await sendPushToUser(user.id, { title: "TeraXGPT notifications enabled", body: "Push notifications are working. Scheduled actions will notify you here.", url: "/settings" });
           return sent ? Response.json({ ok: true, sent }) : Response.json({ error: "No active subscription was found. Enable notifications first." }, { status: 409 });
