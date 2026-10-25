@@ -14,11 +14,11 @@ import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
-import { Route as ApiPushRouteImport } from './routes/api/push'
-import { Route as ApiPresentationsRouteImport } from './routes/api/presentations'
 import { Route as ApiConnectorsRouteImport } from './routes/api/connectors'
 import { Route as ApiCoworkersRouteImport } from './routes/api/coworkers'
 import { Route as ApiPluginsRouteImport } from './routes/api/plugins'
+import { Route as ApiPresentationsRouteImport } from './routes/api/presentations'
+import { Route as ApiPushRouteImport } from './routes/api/push'
 import { Route as ApiRealtimeSessionRouteImport } from './routes/api/realtime-session'
 import { Route as ApiSpeakRouteImport } from './routes/api/speak'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
@@ -54,16 +54,6 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPushRoute = ApiPushRouteImport.update({
-  id: '/api/push',
-  path: '/api/push',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPresentationsRoute = ApiPresentationsRouteImport.update({
-  id: '/api/presentations',
-  path: '/api/presentations',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiConnectorsRoute = ApiConnectorsRouteImport.update({
   id: '/api/connectors',
   path: '/api/connectors',
@@ -77,6 +67,16 @@ const ApiCoworkersRoute = ApiCoworkersRouteImport.update({
 const ApiPluginsRoute = ApiPluginsRouteImport.update({
   id: '/api/plugins',
   path: '/api/plugins',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPresentationsRoute = ApiPresentationsRouteImport.update({
+  id: '/api/presentations',
+  path: '/api/presentations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushRoute = ApiPushRouteImport.update({
+  id: '/api/push',
+  path: '/api/push',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRealtimeSessionRoute = ApiRealtimeSessionRouteImport.update({
@@ -131,11 +131,11 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
-  '/api/push': typeof ApiPushRoute
-  '/api/presentations': typeof ApiPresentationsRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/coworkers': typeof ApiCoworkersRouteWithChildren
   '/api/plugins': typeof ApiPluginsRoute
+  '/api/presentations': typeof ApiPresentationsRoute
+  '/api/push': typeof ApiPushRoute
   '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
@@ -152,11 +152,11 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
-  '/api/push': typeof ApiPushRoute
-  '/api/presentations': typeof ApiPresentationsRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/coworkers': typeof ApiCoworkersRouteWithChildren
   '/api/plugins': typeof ApiPluginsRoute
+  '/api/presentations': typeof ApiPresentationsRoute
+  '/api/push': typeof ApiPushRoute
   '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
@@ -174,11 +174,11 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
-  '/api/push': typeof ApiPushRoute
-  '/api/presentations': typeof ApiPresentationsRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/coworkers': typeof ApiCoworkersRouteWithChildren
   '/api/plugins': typeof ApiPluginsRoute
+  '/api/presentations': typeof ApiPresentationsRoute
+  '/api/push': typeof ApiPushRoute
   '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/transcribe': typeof ApiTranscribeRoute
@@ -197,11 +197,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/settings'
     | '/api/chat'
-    | '/api/push'
-    | '/api/presentations'
     | '/api/connectors'
     | '/api/coworkers'
     | '/api/plugins'
+    | '/api/presentations'
+    | '/api/push'
     | '/api/realtime-session'
     | '/api/speak'
     | '/api/transcribe'
@@ -218,11 +218,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/settings'
     | '/api/chat'
-    | '/api/push'
-    | '/api/presentations'
     | '/api/connectors'
     | '/api/coworkers'
     | '/api/plugins'
+    | '/api/presentations'
+    | '/api/push'
     | '/api/realtime-session'
     | '/api/speak'
     | '/api/transcribe'
@@ -239,11 +239,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/settings'
     | '/api/chat'
-    | '/api/push'
-    | '/api/presentations'
     | '/api/connectors'
     | '/api/coworkers'
     | '/api/plugins'
+    | '/api/presentations'
+    | '/api/push'
     | '/api/realtime-session'
     | '/api/speak'
     | '/api/transcribe'
@@ -261,11 +261,11 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   SettingsRoute: typeof SettingsRoute
   ApiChatRoute: typeof ApiChatRoute
-  ApiPushRoute: typeof ApiPushRoute
-  ApiPresentationsRoute: typeof ApiPresentationsRoute
   ApiConnectorsRoute: typeof ApiConnectorsRoute
   ApiCoworkersRoute: typeof ApiCoworkersRouteWithChildren
   ApiPluginsRoute: typeof ApiPluginsRoute
+  ApiPresentationsRoute: typeof ApiPresentationsRoute
+  ApiPushRoute: typeof ApiPushRoute
   ApiRealtimeSessionRoute: typeof ApiRealtimeSessionRoute
   ApiSpeakRoute: typeof ApiSpeakRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
@@ -311,20 +311,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/push': {
-      id: '/api/push'
-      path: '/api/push'
-      fullPath: '/api/push'
-      preLoaderRoute: typeof ApiPushRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/presentations': {
-      id: '/api/presentations'
-      path: '/api/presentations'
-      fullPath: '/api/presentations'
-      preLoaderRoute: typeof ApiPresentationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/connectors': {
       id: '/api/connectors'
       path: '/api/connectors'
@@ -344,6 +330,20 @@ declare module '@tanstack/react-router' {
       path: '/api/plugins'
       fullPath: '/api/plugins'
       preLoaderRoute: typeof ApiPluginsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/presentations': {
+      id: '/api/presentations'
+      path: '/api/presentations'
+      fullPath: '/api/presentations'
+      preLoaderRoute: typeof ApiPresentationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push': {
+      id: '/api/push'
+      path: '/api/push'
+      fullPath: '/api/push'
+      preLoaderRoute: typeof ApiPushRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/realtime-session': {
@@ -434,11 +434,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   SettingsRoute: SettingsRoute,
   ApiChatRoute: ApiChatRoute,
-  ApiPushRoute: ApiPushRoute,
-  ApiPresentationsRoute: ApiPresentationsRoute,
   ApiConnectorsRoute: ApiConnectorsRoute,
   ApiCoworkersRoute: ApiCoworkersRouteWithChildren,
   ApiPluginsRoute: ApiPluginsRoute,
+  ApiPresentationsRoute: ApiPresentationsRoute,
+  ApiPushRoute: ApiPushRoute,
   ApiRealtimeSessionRoute: ApiRealtimeSessionRoute,
   ApiSpeakRoute: ApiSpeakRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
