@@ -8,9 +8,9 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 // Configure the target Supabase project through local/deployment environment variables.
 // Never bake credentials into source code. Publishable keys are designed for client use,
 // but are still supplied at build time rather than committed to the repository.
-const SUPABASE_URL = process.env["VITE_SUPABASE_URL"] || "";
+const SUPABASE_URL = process.env["VITE_SUPABASE_URL"] || "https://cpteuvnquolloqfuxkzc.supabase.co";
 const SUPABASE_KEY = process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] || "";
-const SUPABASE_PROJECT = process.env["VITE_SUPABASE_PROJECT_ID"] || "";
+const SUPABASE_PROJECT = process.env["VITE_SUPABASE_PROJECT_ID"] || "cpteuvnquolloqfuxkzc";
 
 export default defineConfig({
   vite: {
