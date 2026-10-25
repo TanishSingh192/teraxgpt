@@ -1,6 +1,7 @@
 import { PUBLIC_SUPABASE_KEY, PUBLIC_SUPABASE_URL } from "@/lib/public-backend";
 import { createFileRoute } from "@tanstack/react-router";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   createUIMessageStream,
@@ -15,7 +16,6 @@ import {
 import { z } from "zod";
 
 import {
-  createLovableAiGatewayProvider,
   createLovableAiGatewayRunIdFetch,
   getLovableAiGatewayRunId,
 } from "@/lib/ai-gateway.server";
@@ -203,6 +203,7 @@ export const Route = createFileRoute("/api/chat")({
     handlers: {
       POST: async ({ request }) => {
         const apiKey = process.env["LOVABLE_API_KEY"] ?? "";
+        const geminiApiKey = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_API_KEY"] ?? "";
 
         // Authenticate the caller with their app session.
         const authHeader = request.headers.get("authorization") ?? "";
@@ -280,8 +281,8 @@ export const Route = createFileRoute("/api/chat")({
         // Agno is optional: when its server isn't configured, use the built-in engine.
         const agnoReady = Boolean(process.env["AGNO_BASE_URL"] && process.env["AGNO_API_KEY"]);
         const engine = body.engine === "agno" && agnoReady ? "agno" : "standard";
-        if (engine === "standard" && !apiKey) {
-          return Response.json({ error: "AI is not configured." }, { status: 500 });
+        if (engine === "standard" && !geminiApiKey) {
+          return Response.json({ error: "Free Gemini API is not configured. Add GEMINI_API_KEY from Google AI Studio to the server environment." }, { status: 500 });
         }
         if (engine === "agno") {
           if (body.temporaryChat) {
@@ -397,6 +398,7 @@ export const Route = createFileRoute("/api/chat")({
             }),
             ...(approvalNeeded("generate_image") ? { needsApproval: true } : {}),
             execute: async ({ prompt }) => {
+              if (!apiKey) throw new Error("Image generation uses a separate image service and is not included in the free Gemini text-model tier. Configure LOVABLE_API_KEY to enable it.");
               const bytes = await generateImageBytes(apiKey, prompt, request.signal);
               const path = `${userId}/${crypto.randomUUID()}.png`;
               const { error } = await supabase.storage
@@ -691,7 +693,7 @@ export const Route = createFileRoute("/api/chat")({
                 });
               })()
             : streamText({
-                model: createLovableAiGatewayProvider(apiKey, initialRunId)(model.id),
+                model: createOpenAICompatible({ name: "google", baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", apiKey: geminiApiKey })(model.id),
                 ...shared,
               });
 
