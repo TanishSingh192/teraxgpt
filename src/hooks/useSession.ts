@@ -12,9 +12,19 @@ export function useSession() {
     // Auth events are authoritative. Do not let a slower getSession() call
     // overwrite a newer SIGNED_IN event with a stale null session.
     let receivedAuthEvent = false;
+    // Never leave the entire app on the loading screen if browser storage or
+    // the auth client's session restoration stalls. The normal auth result or
+    // auth event wins; this is only a last-resort escape hatch.
+    const loadingFallback = window.setTimeout(() => {
+      if (!active || receivedAuthEvent) return;
+      console.error("[auth] Session restoration timed out; continuing to the sign-in flow.");
+      setSession(null);
+      setLoading(false);
+    }, 10000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       receivedAuthEvent = true;
+      window.clearTimeout(loadingFallback);
       if (!active) return;
       setSession(nextSession);
       setLoading(false);
@@ -22,6 +32,7 @@ export function useSession() {
 
     void supabase.auth.getSession().then(({ data, error }) => {
       if (!active || receivedAuthEvent) return;
+      window.clearTimeout(loadingFallback);
       if (error) {
         console.error("[auth] Could not restore the saved session:", error.message);
       }
@@ -29,6 +40,7 @@ export function useSession() {
       setLoading(false);
     }).catch((error: unknown) => {
       if (!active || receivedAuthEvent) return;
+      window.clearTimeout(loadingFallback);
       console.error("[auth] Session restoration failed:", error);
       setSession(null);
       setLoading(false);
@@ -36,6 +48,7 @@ export function useSession() {
 
     return () => {
       active = false;
+      window.clearTimeout(loadingFallback);
       subscription.unsubscribe();
     };
   }, []);
