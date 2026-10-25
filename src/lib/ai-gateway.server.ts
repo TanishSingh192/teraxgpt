@@ -69,3 +69,8 @@ export function createLovableAiGatewayProvider(
 export function getLovableAiGatewayRunId(request: Request) {
   return request.headers.get(LOVABLE_AIG_RUN_ID_HEADER)?.trim() || undefined;
 }
+
+/** Direct Gemini provider using Google's OpenAI-compatible API. */
+export function createGeminiFreeProvider(key: string) {
+  return createOpenAICompatible({ name: "google-gemini", baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/", apiKey: key, supportsStructuredOutputs: false });
+}
