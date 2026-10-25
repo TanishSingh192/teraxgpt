@@ -14,6 +14,7 @@ import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiPushRouteImport } from './routes/api/push'
 import { Route as ApiPresentationsRouteImport } from './routes/api/presentations'
 import { Route as ApiConnectorsRouteImport } from './routes/api/connectors'
 import { Route as ApiCoworkersRouteImport } from './routes/api/coworkers'
@@ -51,6 +52,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushRoute = ApiPushRouteImport.update({
+  id: '/api/push',
+  path: '/api/push',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPresentationsRoute = ApiPresentationsRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/push': typeof ApiPushRoute
   '/api/presentations': typeof ApiPresentationsRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/coworkers': typeof ApiCoworkersRouteWithChildren
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/push': typeof ApiPushRoute
   '/api/presentations': typeof ApiPresentationsRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/coworkers': typeof ApiCoworkersRouteWithChildren
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/settings': typeof SettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/push': typeof ApiPushRoute
   '/api/presentations': typeof ApiPresentationsRoute
   '/api/connectors': typeof ApiConnectorsRoute
   '/api/coworkers': typeof ApiCoworkersRouteWithChildren
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/settings'
     | '/api/chat'
+    | '/api/push'
     | '/api/presentations'
     | '/api/connectors'
     | '/api/coworkers'
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/settings'
     | '/api/chat'
+    | '/api/push'
     | '/api/presentations'
     | '/api/connectors'
     | '/api/coworkers'
@@ -228,6 +239,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/settings'
     | '/api/chat'
+    | '/api/push'
     | '/api/presentations'
     | '/api/connectors'
     | '/api/coworkers'
@@ -249,6 +261,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   SettingsRoute: typeof SettingsRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiPushRoute: typeof ApiPushRoute
   ApiPresentationsRoute: typeof ApiPresentationsRoute
   ApiConnectorsRoute: typeof ApiConnectorsRoute
   ApiCoworkersRoute: typeof ApiCoworkersRouteWithChildren
@@ -296,6 +309,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push': {
+      id: '/api/push'
+      path: '/api/push'
+      fullPath: '/api/push'
+      preLoaderRoute: typeof ApiPushRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/presentations': {
@@ -414,6 +434,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   SettingsRoute: SettingsRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiPushRoute: ApiPushRoute,
   ApiPresentationsRoute: ApiPresentationsRoute,
   ApiConnectorsRoute: ApiConnectorsRoute,
   ApiCoworkersRoute: ApiCoworkersRouteWithChildren,
