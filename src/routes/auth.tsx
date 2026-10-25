@@ -6,6 +6,7 @@ import logoAsset from "@/assets/terax-logo.png.asset.json";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
+import { AUTH_ENABLED } from "@/lib/auth-config";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -37,7 +38,7 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && session) void navigate({ to: "/" });
+    if (!AUTH_ENABLED || (!loading && session)) void navigate({ to: "/" });
   }, [loading, session, navigate]);
 
   async function submit(event: React.FormEvent) {
@@ -93,6 +94,10 @@ function AuthPage() {
     }
     if (result.redirected) return;
     void navigate({ to: "/" });
+  }
+
+  if (!AUTH_ENABLED) {
+    return <div className="mesh-canvas flex min-h-screen items-center justify-center px-4 py-10 text-sm text-subtle">Opening TeraXGPT…</div>;
   }
 
   return (
