@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import logoAsset from "@/assets/terax-logo.png.asset.json";
-import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { AUTH_ENABLED } from "@/lib/auth-config";
@@ -53,16 +52,8 @@ function AuthPage() {
         });
         if (error) throw error;
         if (!data.session) {
-          // Fall back to an immediate sign-in when email confirmation is disabled.
-          const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          if (signInError) throw signInError;
-          if (!signedIn.session) {
-            toast.success("Account created. Check your email to confirm your address, then sign in.");
-            return;
-          }
+          toast.success("Account created. Check your email to confirm your address, then sign in.");
+          return;
         }
         toast.success("Welcome to TeraX CPT.");
       } else {
@@ -85,15 +76,7 @@ function AuthPage() {
   }
 
   async function google() {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      toast.error("Google sign-in failed. Try again.");
-      return;
-    }
-    if (result.redirected) return;
-    void navigate({ to: "/" });
+    toast.error("Google sign-in is not enabled for this workspace. Use email and password.");
   }
 
   if (!AUTH_ENABLED) {

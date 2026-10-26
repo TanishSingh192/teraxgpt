@@ -4,20 +4,22 @@
 //     nitro (build-only using cloudflare as a default target), VITE_* env injection, @ path alias,
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { BACKEND_URL, BACKEND_PROJECT_ID, BACKEND_PUBLISHABLE_KEY } from "./src/lib/backend-config";
 
-// Configure the target Supabase project through local/deployment environment variables.
-// Never bake credentials into source code. Publishable keys are designed for client use,
-// but are still supplied at build time rather than committed to the repository.
-const SUPABASE_URL = process.env["VITE_SUPABASE_URL"] || "https://cpteuvnquolloqfuxkzc.supabase.co";
-const SUPABASE_KEY = process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] || "";
-const SUPABASE_PROJECT = process.env["VITE_SUPABASE_PROJECT_ID"] || "cpteuvnquolloqfuxkzc";
+// Bind browser and server to the same explicitly selected user-owned project.
+// These are public values; private provider credentials remain runtime secrets.
 
 export default defineConfig({
   vite: {
     define: {
-      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(SUPABASE_URL),
-      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(SUPABASE_KEY),
-      "import.meta.env.VITE_SUPABASE_PROJECT_ID": JSON.stringify(SUPABASE_PROJECT),
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(BACKEND_URL),
+      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(BACKEND_PUBLISHABLE_KEY),
+      "import.meta.env.VITE_SUPABASE_PROJECT_ID": JSON.stringify(BACKEND_PROJECT_ID),
+      "import.meta.env.VITE_AUTH_ENABLED": JSON.stringify("true"),
+      "process.env.SUPABASE_URL": JSON.stringify(BACKEND_URL),
+      "process.env.VITE_SUPABASE_URL": JSON.stringify(BACKEND_URL),
+      "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(BACKEND_PUBLISHABLE_KEY),
+      "process.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(BACKEND_PUBLISHABLE_KEY),
     },
   },
   tanstackStart: {
