@@ -1,13 +1,15 @@
 # Supabase project migration
 
 TeraXGPT is being switched from the previous Supabase project to the personal project
-`cpteuvnquolloqfuxkzc`. The project URL is public configuration. Publishable keys, database
-passwords, service-role keys, access tokens, and backup files must not be committed.
+`cpteuvnquolloqfuxkzc`. The project URL and publishable key are public configuration.
+Database passwords, service-role keys, access tokens, and backup files must not be committed.
 
 ## 1. Configure the application
 
-Set these in the local `.env` file and in the hosting provider's environment settings
-(for the same deployment environment):
+The supplied URL and publishable key are now in `src/lib/backend-config.ts`.
+`vite.config.ts` binds both browser and server to these public values so an old managed
+environment cannot override the selected project. Publish again to update the live site.
+For independent hosting, the equivalent environment values are:
 
 - `VITE_SUPABASE_URL=https://cpteuvnquolloqfuxkzc.supabase.co`
 - `SUPABASE_URL=https://cpteuvnquolloqfuxkzc.supabase.co`
@@ -16,9 +18,11 @@ Set these in the local `.env` file and in the hosting provider's environment set
 - `VITE_SUPABASE_PUBLISHABLE_KEY` — set the new project's publishable key.
 - `SUPABASE_PUBLISHABLE_KEY` — set the same publishable key for server-side Supabase clients.
 
-The publishable key is intended for public client use, but keep it in environment configuration
-as requested. Never put a service-role key, database password, or Gemini API key in a `VITE_*`
-variable. Redeploy after changing build-time variables.
+Never put a service-role key, database password, or Gemini API key in a `VITE_*`
+variable or public configuration. Redeploy after changing build-time values.
+Email/password sign-in is enabled; the target requires email confirmation. Google is disabled
+on the target and cannot use the managed Cloud broker. Configure an external OAuth flow before
+enabling the Google button.
 
 ## 2. Apply the schema to the new project
 
@@ -72,3 +76,7 @@ rows, Auth identities, or Storage files.
 Update the environment variables in the hosting provider (and any background worker) separately.
 Repository commits cannot update hosting secrets automatically. Confirm that no old Supabase
 URL/key remains in the active deployment configuration, then redeploy and run smoke tests.
+
+Coworker workers, cancellation and push notifications currently require a server-only privileged
+key belonging to the target project. Do not reuse a managed Cloud service key with the external
+URL. A publishable key cannot create schema, export old data or authorize privileged operations.

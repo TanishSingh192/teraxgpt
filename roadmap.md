@@ -1,14 +1,13 @@
-# Roadmap — Move from Lovable Cloud to own Firebase
+# Roadmap — Move to your own Supabase
 
-## Blocked on you
-- [ ] Resume the backend: workspace ran out of Cloud credits, database is paused. Add Cloud credits in workspace billing so it wakes up.
-- [ ] Export backup (after resume): More → Database → Manage → Settings → Export data. Do this BEFORE removing anything — removal is irreversible. Storage files are not included; download them from More → Storage.
-- [ ] Provide Firebase project config (web apiKey, projectId, appId, etc.) and a service-account JSON for the server side.
-- [ ] Remove Lovable Cloud (last step, admin only): More → Database → Manage → Settings → Remove Database.
+## Connection
+- [x] Configure browser and server to use your supplied Supabase project and publishable key.
+- [x] Enable account sign-in instead of anonymous sessions (disabled on your project).
+- [x] Verify the sign-in screen and target connection; automatic build checks pass.
 
-## In progress (me)
-- [ ] Scaffold Firebase client + admin modules
-- [ ] Migrate auth (email/password + Google) to Firebase Auth
-- [ ] Migrate database layer (29 files use Supabase: chat, projects, agents, settings, coworkers, connectors, plugins)
-- [ ] Migrate storage (generated images bucket) to Firebase Storage
-- [ ] Verify sign-in, chat, projects end-to-end on Firebase
+## Blocked on external access
+- [ ] Apply the existing schema migrations to your project: chat and project tables are missing; a publishable key cannot create tables.
+- [ ] Verify signed-in chat and project creation after schema setup and an account in your own project.
+- [ ] Copy old accounts, chats and storage only after a verified backup; the old Lovable Cloud backend is paused.
+- [ ] Configure Google sign-in in your project if wanted; it is currently disabled.
+- [ ] Configure a matching server-side privileged key before enabling coworker workers or push notifications; no privileged credential for the external project was provided.
