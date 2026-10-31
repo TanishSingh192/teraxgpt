@@ -1,8 +1,7 @@
 name: Run scheduled actions
 
+# Automatic scheduling disabled. Keep manual runs available.
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 permissions:
